@@ -1,0 +1,22 @@
+{
+  "name": "FlowHabit",
+  "short_name": "FlowHabit",
+  "description": "A conditional habit tracker with cloud sync",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1e293b",
+  "theme_color": "#1e293b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/96/git-merge.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/192/git-merge.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
