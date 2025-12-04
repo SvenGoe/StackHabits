@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowHabit</title>
+    <meta name="description" content="A conditional habit tracker with cloud sync">
+    <meta name="theme-color" content="#1e293b">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/96/git-merge.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Scrollbar for dark mode */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+            #app-container { box-shadow: none; border: none; }
+        }
+        
+        .print-only { display: none; }
+        
+        /* Smooth transitions */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Navigation Bar -->
+    <nav class="no-print h-14 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 shrink-0 z-50">
+        <div class="flex items-center gap-2 font-bold text-lg tracking-tight">
+            <i data-lucide="git-merge" class="text-indigo-400"></i>
+            <span>FlowHabit</span>
+            <span id="sync-status" class="text-[10px] font-normal text-slate-500 ml-2 border border-slate-700 px-1 rounded">Offline</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="switchView('run')" id="btn-run" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
+                Run
+            </button>
+            <button onclick="switchView('edit')" id="btn-edit" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">
+                Edit
+            </button>
+            <button onclick="exportPDF()" class="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Export to PDF">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+            </button>
+            <button onclick="resetData()" class="p-2 rounded-md text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors" title="Reset Default">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto relative p-4 sm:p-6 flex justify-center">
+
+        <!-- LOADING OVERLAY -->
+        <div id="loader" class="absolute inset-0 bg-slate-900 z-50 flex items-center justify-center">
+            <div class="text-indigo-500 flex flex-col items-center gap-4">
+                <i data-lucide="loader-2" class="w-10 h-10 animate-spin"></i>
+                <span class="text-sm text-slate-400">Syncing with Cloud...</span>
+            </div>
+        </div>
+
+        <!-- RUN VIEW -->
+        <div id="view-run" class="w-full max-w-lg flex flex-col justify-center h-full fade-in hidden">
+            <div id="card-container" class="bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-8 text-center min-h-[300px] flex flex-col justify-center items-center relative overflow-hidden">
+                
+                <!-- Progress Indicator -->
+                <div class="absolute top-0 left-0 w-full h-1 bg-slate-700">
+                    <div id="progress-bar" class="h-full bg-indigo-500 transition-all duration-300" style="width: 0%"></div>
+                </div>
+
+                <div id="step-content" class="w-full">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+            
+            <div class="mt-6 text-center">
+                <button onclick="restartFlow()" class="text-slate-500 hover:text-slate-300 text-sm flex items-center justify-center gap-1 mx-auto transition-colors">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Restart Routine
+                </button>
+            </div>
+        </div>
+
+        <!-- EDIT VIEW -->
+        <div id="view-edit" class="hidden w-full max-w-4xl fade-in pb-20">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Workflow Editor</h2>
+                    <p class="text-slate-400 text-sm mt-1">Changes save automatically to the cloud.</p>
+                </div>
+                <button onclick="addStep()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-emerald-500/10">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Step
+                </button>
+            </div>
+
+            <div id="editor-list" class="space-y-4">
+                <!-- Dynamic Editor Items -->
+            </div>
+            
+            <div class="h-10"></div>
+        </div>
+
+    </main>
+
+    <!-- PRINT/PDF VIEW -->
+    <div id="print-view" class="print-only p-8 bg-white text-black min-h-screen">
+        <h1 class="text-3xl font-bold border-b-2 border-black pb-4 mb-6">My Routine Logic</h1>
+        <div id="print-content" class="space-y-6"></div>
+        <div class="mt-12 text-xs text-gray-500 border-t pt-4">Generated by FlowHabit</div>
+    </div>
+
+    <!-- FIREBASE & APP LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG ---
+        // Provided by environment or placeholders
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "demo", authDomain: "demo", projectId: "demo" }; // Placeholder for local dev if needed
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'flowhabit-dev';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- STATE ---
+        const DEFAULT_WORKFLOW = [
+            { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee" },
+            { id: "gym-prep", type: "task", text: "Pack gym clothes & water", next: "protein" },
+            { id: "protein", type: "task", text: "Drink pre-workout / Eat Banana", next: "go-gym" },
+            { id: "go-gym", type: "task", text: "Go to Gym", next: "shower" },
+            { id: "coffee", type: "task", text: "Brew Coffee", next: "read" },
+            { id: "read", type: "task", text: "Read 10 pages", next: "shower" },
+            { id: "shower", type: "task", text: "Take a cold shower", next: "work" },
+            { id: "work", type: "task", text: "Check Calendar", next: "end" },
+            { id: "end", type: "end", text: "Routine Complete!", next: null }
+        ];
+
+        let workflow = [];
+        let currentStepId = "start";
+        let historyStack = [];
+        let userId = null;
+        let unsubscribeData = null;
+
+        // --- AUTH & INIT ---
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.error("Auth error", e);
+            }
+        }
+
+        // --- DB LOGIC ---
+        function subscribeToData() {
+            if (!userId) return;
+            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'data', 'workflow');
+            
+            document.getElementById('sync-status').textContent = 'Syncing...';
+            document.getElementById('sync-status').className = 'text-[10px] font-normal text-yellow-500 ml-2 border border-yellow-700 px-1 rounded';
+
+            unsubscribeData = onSnapshot(docRef, (snap) => {
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('sync-status').textContent = 'Online';
+                document.getElementById('sync-status').className = 'text-[10px] font-normal text-emerald-500 ml-2 border border-emerald-900 px-1 rounded';
+                
+                if (snap.exists()) {
+                    workflow = snap.data().steps;
+                } else {
+                    // Initialize with default if new user
+                    workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
+                    saveToCloud(); 
+                }
+                
+                // Only render if we aren't mid-interaction to prevent jumps, 
+                // or if it's first load
+                if(document.getElementById('editor-list').children.length === 0 || document.getElementById('view-edit').classList.contains('hidden')) {
+                    window.renderEditor();
+                }
+                if(document.getElementById('step-content').innerHTML === '') {
+                   window.renderRunView();
+                }
+                
+                // Initial View Show
+                if(document.getElementById('view-run').classList.contains('hidden') && document.getElementById('view-edit').classList.contains('hidden')) {
+                    window.switchView('run');
+                }
+
+            }, (err) => {
+                console.error("Sync error", err);
+                document.getElementById('sync-status').textContent = 'Error';
+            });
+        }
+
+        window.saveToCloud = async function() {
+            if (!userId) return;
+            document.getElementById('sync-status').textContent = 'Saving...';
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'data', 'workflow'), { 
+                    steps: workflow,
+                    lastUpdated: new Date().toISOString()
+                });
+            } catch (e) {
+                console.error("Save failed", e);
+            }
+        }
+
+        // --- GLOBAL EXPORTS (for HTML event handlers) ---
+        window.resetData = function() {
+            if(confirm("Reset to default workflow? This cannot be undone.")) {
+                workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
+                window.saveToCloud();
+                window.restartFlow();
+                window.renderEditor();
+                window.switchView('run');
+            }
+        }
+
+        window.switchView = function(viewName) {
+            document.getElementById('view-run').classList.add('hidden');
+            document.getElementById('view-edit').classList.add('hidden');
+            
+            // Reset buttons
+            const resetBtn = (id) => {
+                const b = document.getElementById(id);
+                b.className = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300";
+            };
+            resetBtn('btn-run');
+            resetBtn('btn-edit');
+
+            if (viewName === 'run') {
+                document.getElementById('view-run').classList.remove('hidden');
+                const btn = document.getElementById('btn-run');
+                btn.className = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 text-white shadow-lg shadow-indigo-500/20";
+                window.renderRunView();
+            } else {
+                document.getElementById('view-edit').classList.remove('hidden');
+                const btn = document.getElementById('btn-edit');
+                btn.className = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 text-white shadow-lg shadow-indigo-500/20";
+                window.renderEditor();
+            }
+        }
+
+        window.restartFlow = function() {
+            currentStepId = "start";
+            historyStack = [];
+            window.renderRunView();
+        }
+
+        window.nextStep = function(targetId) {
+            historyStack.push(currentStepId);
+            currentStepId = targetId;
+            window.renderRunView();
+        }
+
+        window.getStep = function(id) {
+            return workflow.find(s => s.id === id) || { type: 'end', text: 'Step not found' };
+        }
+
+        window.renderRunView = function() {
+            if(workflow.length === 0) return;
+            
+            // Auto-correct invalid start
+            if(!workflow.find(s => s.id === currentStepId)) {
+                currentStepId = workflow[0].id;
+            }
+
+            const step = window.getStep(currentStepId);
+            const container = document.getElementById('step-content');
+            
+            const total = workflow.length;
+            const currentIdx = historyStack.length;
+            const pct = Math.min((currentIdx / (total * 0.7)) * 100, 100); 
+            document.getElementById('progress-bar').style.width = step.type === 'end' ? '100%' : `${pct}%`;
+
+            let html = '';
+            let icon = 'circle';
+            if(step.type === 'decision') icon = 'git-branch';
+            if(step.type === 'end') icon = 'check-circle';
+            if(step.type === 'task') icon = 'check-square';
+
+            html += `
+                <div class="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-700/50 text-indigo-400 mb-4 animate-bounce-slow">
+                    <i data-lucide="${icon}" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-3xl font-bold mb-8 leading-tight">${step.text}</h2>
+            `;
+
+            if (step.type === 'decision') {
+                html += `
+                    <div class="grid grid-cols-2 gap-4 w-full">
+                        <button onclick="nextStep('${step.nextIfYes}')" class="py-4 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-transform active:scale-95 shadow-lg shadow-indigo-500/25">
+                            Yes
+                        </button>
+                        <button onclick="nextStep('${step.nextIfNo}')" class="py-4 px-6 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-semibold transition-transform active:scale-95">
+                            No
+                        </button>
+                    </div>
+                `;
+            } else if (step.type === 'task') {
+                html += `
+                    <button onclick="nextStep('${step.next}')" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-lg transition-transform active:scale-95 shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2">
+                        Next Step <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                `;
+            } else if (step.type === 'end') {
+                html += `
+                    <p class="text-slate-400 mb-6">You have completed your routine.</p>
+                    <div class="text-emerald-400 font-bold">Good Job!</div>
+                `;
+            }
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        window.renderEditor = function() {
+            const container = document.getElementById('editor-list');
+            // Save scroll position
+            const scrollPos = container.parentElement.scrollTop;
+            container.innerHTML = '';
+
+            workflow.forEach((step, index) => {
+                const el = document.createElement('div');
+                el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-4 relative group';
+                
+                const getOptions = (selected) => {
+                    let opts = `<option value="">-- End Routine --</option>`;
+                    workflow.forEach(s => {
+                        opts += `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.text.substring(0, 20)}${s.text.length>20?'...':''} (${s.id})</option>`;
+                    });
+                    return opts;
+                };
+
+                let logicHtml = '';
+                if(step.type === 'task') {
+                    logicHtml = `
+                        <div class="flex flex-col">
+                            <label class="text-xs text-slate-500 uppercase font-bold mb-1">Next Step</label>
+                            <select onchange="updateStep(${index}, 'next', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
+                                ${getOptions(step.next)}
+                            </select>
+                        </div>
+                    `;
+                } else if (step.type === 'decision') {
+                    logicHtml = `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-xs text-slate-500 uppercase font-bold mb-1">If Yes -> Go To</label>
+                                <select onchange="updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
+                                    ${getOptions(step.nextIfYes)}
+                                </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-xs text-slate-500 uppercase font-bold mb-1">If No -> Go To</label>
+                                <select onchange="updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
+                                    ${getOptions(step.nextIfNo)}
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                el.innerHTML = `
+                    <div class="flex justify-between items-start gap-4">
+                        <div class="w-1/4 min-w-[100px]">
+                            <label class="text-xs text-slate-500 uppercase font-bold">ID</label>
+                            <input type="text" value="${step.id}" onchange="updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-xs text-slate-500 uppercase font-bold">Text</label>
+                            <input type="text" value="${step.text}" onchange="updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none">
+                        </div>
+                         <div class="w-24">
+                            <label class="text-xs text-slate-500 uppercase font-bold">Type</label>
+                            <select onchange="updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
+                                <option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option>
+                                <option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option>
+                                <option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option>
+                            </select>
+                        </div>
+                    </div>
+                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">${logicHtml}</div>` : ''}
+                    
+                    <button onclick="deleteStep(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" title="Delete Step">
+                        <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                `;
+                container.appendChild(el);
+            });
+            lucide.createIcons();
+            // restore scroll
+            container.parentElement.scrollTop = scrollPos;
+        }
+
+        window.updateStep = function(index, field, value) {
+            workflow[index][field] = value;
+            window.saveToCloud();
+            if(field === 'type') window.renderEditor();
+        }
+
+        window.addStep = function() {
+            const newId = "step-" + Math.floor(Math.random() * 1000);
+            workflow.push({ id: newId, type: "task", text: "New Step", next: "" });
+            window.saveToCloud();
+            window.renderEditor();
+            setTimeout(() => {
+                const list = document.getElementById('editor-list');
+                list.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+
+        window.deleteStep = function(index) {
+            if(confirm("Delete this step?")) {
+                workflow.splice(index, 1);
+                window.saveToCloud();
+                window.renderEditor();
+            }
+        }
+
+        window.exportPDF = function() {
+            const printContainer = document.getElementById('print-content');
+            let html = '';
+            html += `<div class="mb-4 text-sm font-mono text-gray-500">START AT ID: ${workflow.find(s=>s.id==='start') ? 'start' : workflow[0].id}</div>`;
+            html += `<table class="w-full text-left border-collapse">`;
+            html += `<thead><tr class="border-b-2 border-black"><th class="py-2">Step Name</th><th class="py-2">Instruction</th><th class="py-2">Logic</th></tr></thead>`;
+            html += `<tbody>`;
+
+            workflow.forEach(step => {
+                let logic = '';
+                if(step.type === 'task') {
+                    logic = step.next ? `Next &rarr; <b>${step.next}</b>` : `FINISH`;
+                } else if (step.type === 'decision') {
+                    logic = `<div>Yes &rarr; <b>${step.nextIfYes}</b></div><div>No &rarr; <b>${step.nextIfNo}</b></div>`;
+                } else {
+                    logic = 'End of Routine';
+                }
+
+                html += `
+                    <tr class="border-b border-gray-300">
+                        <td class="py-4 align-top font-mono text-xs text-gray-500 pt-5 pr-2 w-24">${step.id}</td>
+                        <td class="py-4 align-top pr-4">
+                            <div class="font-bold text-lg">${step.text}</div>
+                            <div class="text-xs uppercase tracking-wide bg-gray-200 inline-block px-1 rounded mt-1">${step.type}</div>
+                        </td>
+                        <td class="py-4 align-top font-mono text-sm">${logic}</td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table>`;
+            printContainer.innerHTML = html;
+            window.print();
+        }
+
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed', err));
+            });
+        }
+
+        // Initialize
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                userId = user.uid;
+                subscribeToData();
+            }
+        });
+
+        initAuth();
+    </script>
+</body>
+</html>
