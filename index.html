@@ -7,7 +7,7 @@
     <meta name="description" content="A conditional habit tracker with cloud sync">
     <meta name="theme-color" content="#1e293b">
     
-    <!-- PWA Manifest -->
+    <!-- PWA Manifest Link (Ensure manifest.json exists in your deployment) -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -48,6 +48,18 @@
             background-color: rgba(15, 23, 42, 0.8);
             backdrop-filter: blur(4px);
         }
+
+        /* Loading Animation */
+        .loader-dots div {
+            animation-timing-function: cubic-bezier(0, 1, 1, 0);
+        }
+        .loader-dots div:nth-child(1) { left: 8px; animation: loader-dots1 0.6s infinite; }
+        .loader-dots div:nth-child(2) { left: 8px; animation: loader-dots2 0.6s infinite; }
+        .loader-dots div:nth-child(3) { left: 32px; animation: loader-dots2 0.6s infinite; }
+        .loader-dots div:nth-child(4) { left: 56px; animation: loader-dots3 0.6s infinite; }
+        @keyframes loader-dots1 { from { transform: scale(0); } to { transform: scale(1); } }
+        @keyframes loader-dots3 { from { transform: scale(1); } to { transform: scale(0); } }
+        @keyframes loader-dots2 { from { transform: translate(0, 0); } to { transform: translate(24px, 0); } }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -88,7 +100,7 @@
         <!-- LOADING SPINNER -->
         <div id="loader" class="absolute inset-0 bg-slate-900 z-50 flex items-center justify-center transition-opacity duration-500">
             <div class="text-indigo-500 flex flex-col items-center gap-4">
-                <i data-lucide="loader-2" class="w-10 h-10 animate-spin"></i>
+                <div class="loader-dots inline-block relative w-20 h-20"><div></div><div></div><div></div><div></div></div>
                 <span class="text-sm text-slate-400">Syncing with Cloud...</span>
             </div>
         </div>
@@ -177,16 +189,19 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // --- FIREBASE CONFIG ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyD3kB3DXOGmmFhbBYX_GyutMNwbC_yr10k",
-          authDomain: "stackhabits-1bbfc.firebaseapp.com",
-          projectId: "stackhabits-1bbfc",
-          storageBucket: "stackhabits-1bbfc.firebasestorage.app",
-          messagingSenderId: "659952605114",
-          appId: "1:659952605114:web:31292d2b85ef17a1f4af83"
+        // --- FIREBASE CONFIG (DYNAMIC) ---
+        // This logic ensures it works both in the preview environment (using __firebase_config) 
+        // and locally (using your fallback config).
+        const fallbackConfig = {
+            apiKey: "AIzaSyD3kB3DXOGmmFhbBYX_GyutMNwbC_yr10k",
+            authDomain: "stackhabits-1bbfc.firebaseapp.com",
+            projectId: "stackhabits-1bbfc",
+            storageBucket: "stackhabits-1bbfc.firebasestorage.app",
+            messagingSenderId: "659952605114",
+            appId: "1:659952605114:web:31292d2b85ef17a1f4af83"
         };
-
+        
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : fallbackConfig;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'flowhabit-dev';
 
         const app = initializeApp(firebaseConfig);
@@ -211,42 +226,68 @@
         let historyStack = [];
         let userId = null;
         let unsubscribeData = null;
-        let isLoginMode = true; // For Auth Modal
+        let isLoginMode = true;
 
-        // --- AUTH LOGIC ---
+        // --- AUTH & INIT LOGIC ---
+        // Separate the listener setup from the trigger
+        
+        function setupAuthListener() {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    console.log("User authenticated:", user.uid);
+                    userId = user.uid;
+                    subscribeToData();
+                    updateAuthUI(user);
+                } else {
+                    console.log("User signed out");
+                    userId = null;
+                    updateAuthUI(null);
+                    // If we logged out, maybe reset view or allow re-login
+                }
+            });
+        }
+
         async function initAuth() {
-            // Environment variable takes precedence for dev/previews
+            // Wait for auth before trying to load data
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 try {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } catch(e) { console.error("Custom token fail", e); }
             } else {
-                // If not logged in, we do NOT automatically sign in anonymously anymore
-                // We wait for user action or use existing persistence
-                // However, to keep app usable immediately, we check if there is a user
-                // If no user, we CAN sign in anonymously, or just let them stay "Logged Out" (but app needs userId for DB)
-                // Design Choice: Auto sign-in anonymously so the app works immediately.
-                // User can "Upgrade" to email/pass later.
-                onAuthStateChanged(auth, async (user) => {
-                    if (!user) {
-                        try {
-                            await signInAnonymously(auth);
-                        } catch (e) { console.error("Anon auth failed", e); }
-                    }
-                });
+                // Check if we are already signed in (from persistence)
+                // If not, sign in anonymously
+                if (!auth.currentUser) {
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (e) { console.error("Anon auth failed", e); }
+                }
+            }
+        }
+
+        function updateAuthUI(user) {
+            const authLabel = document.getElementById('auth-label');
+            const authBtn = document.getElementById('btn-auth');
+            
+            if (!user) {
+                authLabel.innerText = 'Login';
+                authBtn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600";
+            } else if (user.isAnonymous) {
+                authLabel.innerText = 'Guest (Login to Sync)';
+                authBtn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600";
+            } else {
+                authLabel.innerText = user.email ? user.email.split('@')[0] : 'Account';
+                authBtn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500";
             }
         }
 
         window.toggleAuthModal = function() {
             if (userId && !auth.currentUser.isAnonymous) {
-                // If logged in as real user, button acts as Logout
                 if(confirm("Log out of " + auth.currentUser.email + "?")) {
                     signOut(auth).then(() => {
-                        window.location.reload(); // Refresh to clear state/get new anon id
+                        window.location.reload(); 
                     });
                 }
             } else {
-                // Show Login Modal
                 const modal = document.getElementById('auth-modal');
                 if (modal.classList.contains('hidden')) {
                     modal.classList.remove('hidden');
@@ -279,12 +320,9 @@
             try {
                 if (isLoginMode) {
                     await signInWithEmailAndPassword(auth, email, pass);
-                    // Login success - Data will sync via onAuthStateChanged
                 } else {
-                    // Signup
                     const cred = await createUserWithEmailAndPassword(auth, email, pass);
-                    // IMPORTANT: On signup, save current local workflow to the new empty account immediately
-                    // so the user keeps their "Guest" work.
+                    // Migrate Guest Data to New Account
                     userId = cred.user.uid;
                     await window.saveToCloud(); 
                 }
@@ -302,50 +340,32 @@
         function subscribeToData() {
             if (!userId) return;
             
-            // Update UI for Auth State
-            const user = auth.currentUser;
-            const authLabel = document.getElementById('auth-label');
-            const authBtn = document.getElementById('btn-auth');
-            
-            if (user.isAnonymous) {
-                authLabel.innerText = 'Login to Sync';
-                authBtn.classList.add('bg-slate-700', 'text-slate-200');
-                authBtn.classList.remove('bg-emerald-600', 'text-white');
-            } else {
-                authLabel.innerText = user.email ? user.email.split('@')[0] : 'Account';
-                authBtn.classList.remove('bg-slate-700', 'text-slate-200');
-                authBtn.classList.add('bg-emerald-600', 'text-white'); // Active color
-            }
-
+            // Use standard artifact path structure
             const docRef = doc(db, 'artifacts', appId, 'users', userId, 'data', 'workflow');
             
             document.getElementById('sync-status').textContent = 'Syncing...';
             document.getElementById('sync-status').className = 'hidden sm:inline-block text-[10px] font-normal text-yellow-500 ml-2 border border-yellow-700 px-1 rounded';
 
-            if (unsubscribeData) unsubscribeData(); // Clean up old listener
+            if (unsubscribeData) unsubscribeData();
 
             unsubscribeData = onSnapshot(docRef, (snap) => {
-                document.getElementById('loader').classList.add('hidden'); // Hide loader
+                document.getElementById('loader').classList.add('hidden');
                 document.getElementById('sync-status').textContent = 'Online';
                 document.getElementById('sync-status').className = 'hidden sm:inline-block text-[10px] font-normal text-emerald-500 ml-2 border border-emerald-900 px-1 rounded';
                 
                 if (snap.exists()) {
                     const data = snap.data();
-                    // Basic merge: Cloud wins.
                     workflow = data.steps || [];
                 } else {
-                    // New account or no data: Save default if empty
                     if (workflow.length === 0) {
                         workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
                     }
-                    // If we just signed up, we want to save our Current Memory to the Cloud
-                    // (Handled in handleAuth, but good backup here)
-                    if(user.isAnonymous) {
+                    if(auth.currentUser && auth.currentUser.isAnonymous) {
                         saveToCloud(); 
                     }
                 }
                 
-                // Refresh Views
+                // Refresh active views
                 if(document.getElementById('editor-list').children.length === 0 || !document.getElementById('view-edit').classList.contains('hidden')) {
                     window.renderEditor();
                 }
@@ -360,7 +380,15 @@
 
             }, (err) => {
                 console.error("Sync error", err);
-                document.getElementById('sync-status').textContent = 'Error';
+                // Don't show error to user if it's just a permissions issue during init, 
+                // but do show if it persists
+                if(err.code === 'permission-denied') {
+                     document.getElementById('sync-status').textContent = 'Perms Error';
+                     // This usually means Rules need to be set to "allow read, write: if request.auth != null;"
+                } else {
+                     document.getElementById('sync-status').textContent = 'Error';
+                }
+                document.getElementById('loader').classList.add('hidden');
             });
         }
 
@@ -374,10 +402,11 @@
                 });
             } catch (e) {
                 console.error("Save failed", e);
+                document.getElementById('sync-status').textContent = 'Save Failed';
             }
         }
 
-        // --- APP LOGIC (View/Logic) ---
+        // --- APP LOGIC ---
         window.resetData = function() {
             if(confirm("Reset to default workflow? This cannot be undone.")) {
                 workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
@@ -615,29 +644,25 @@
             window.print();
         }
 
-        // --- SERVICE WORKER REGISTRATION ---
+        // --- SERVICE WORKER REGISTRATION (SAFE) ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW registered'))
-                    .catch(err => console.log('SW registration failed', err));
+                try {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(reg => console.log('SW registered'))
+                        .catch(err => console.log('SW registration skipped (likely dev env)'));
+                } catch(e) {
+                    console.log('SW registration failed:', e);
+                }
             });
         }
 
-        // Initialize Listener
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                userId = user.uid;
-                subscribeToData();
-            } else {
-                // If logged out, you might want to show a splash screen or just init as guest
-                initAuth();
-            }
-        });
-        
-        // Initial kick
+        // 1. Setup Listener
+        setupAuthListener();
+
+        // 2. Trigger Auth Init
         initAuth();
+
     </script>
 </body>
 </html>
-
