@@ -178,9 +178,14 @@
         import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : { apiKey: "demo", authDomain: "demo", projectId: "demo" };
+        const firebaseConfig = {
+          apiKey: "AIzaSyD3kB3DXOGmmFhbBYX_GyutMNwbC_yr10k",
+          authDomain: "stackhabits-1bbfc.firebaseapp.com",
+          projectId: "stackhabits-1bbfc",
+          storageBucket: "stackhabits-1bbfc.firebasestorage.app",
+          messagingSenderId: "659952605114",
+          appId: "1:659952605114:web:31292d2b85ef17a1f4af83"
+        };
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'flowhabit-dev';
 
@@ -635,3 +640,4 @@
     </script>
 </body>
 </html>
+
