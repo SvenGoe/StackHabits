@@ -42,12 +42,6 @@
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
-        /* Modal Backdrop */
-        .modal-backdrop {
-            background-color: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(4px);
-        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -57,16 +51,9 @@
         <div class="flex items-center gap-2 font-bold text-lg tracking-tight">
             <i data-lucide="git-merge" class="text-indigo-400"></i>
             <span>FlowHabit</span>
-            <span id="sync-status" class="hidden sm:inline-block text-[10px] font-normal text-slate-500 ml-2 border border-slate-700 px-1 rounded">Init...</span>
+            <span id="sync-status" class="text-[10px] font-normal text-slate-500 ml-2 border border-slate-700 px-1 rounded">Offline</span>
         </div>
         <div class="flex gap-2">
-            <!-- Auth Button -->
-            <button onclick="toggleAuthModal()" id="btn-auth" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600">
-                <i data-lucide="user" class="w-4 h-4"></i> <span id="auth-label">Login</span>
-            </button>
-
-            <div class="w-px h-6 bg-slate-700 mx-1"></div>
-
             <button onclick="switchView('run')" id="btn-run" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
                 Run
             </button>
@@ -85,61 +72,28 @@
     <!-- Main Content Area -->
     <main class="flex-1 overflow-y-auto relative p-4 sm:p-6 flex justify-center">
 
-        <!-- LOADING SPINNER -->
-        <div id="loader" class="absolute inset-0 bg-slate-900 z-50 flex items-center justify-center transition-opacity duration-500">
+        <!-- LOADING OVERLAY -->
+        <div id="loader" class="absolute inset-0 bg-slate-900 z-50 flex items-center justify-center">
             <div class="text-indigo-500 flex flex-col items-center gap-4">
                 <i data-lucide="loader-2" class="w-10 h-10 animate-spin"></i>
                 <span class="text-sm text-slate-400">Syncing with Cloud...</span>
             </div>
         </div>
 
-        <!-- AUTH MODAL -->
-        <div id="auth-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-backdrop p-4">
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 id="modal-title" class="text-xl font-bold text-white">Login</h3>
-                        <button onclick="toggleAuthModal()" class="text-slate-400 hover:text-white">
-                            <i data-lucide="x" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-
-                    <div id="auth-error" class="hidden mb-4 p-3 bg-red-900/50 border border-red-700 rounded text-red-200 text-sm"></div>
-
-                    <form id="auth-form" onsubmit="handleAuth(event)" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Email</label>
-                            <input type="email" id="email" required class="w-full bg-slate-900 border border-slate-700 rounded p-3 text-white focus:border-indigo-500 outline-none transition-colors" placeholder="you@example.com">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Password</label>
-                            <input type="password" id="password" required class="w-full bg-slate-900 border border-slate-700 rounded p-3 text-white focus:border-indigo-500 outline-none transition-colors" placeholder="••••••••">
-                        </div>
-                        
-                        <button type="submit" id="submit-btn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/25 transition-transform active:scale-95">
-                            Log In
-                        </button>
-                    </form>
-
-                    <div class="mt-6 text-center text-sm text-slate-400">
-                        <span id="switch-text">Don't have an account?</span>
-                        <button onclick="switchAuthMode()" id="switch-btn" class="text-indigo-400 hover:text-indigo-300 font-medium ml-1">Sign Up</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- RUN VIEW -->
         <div id="view-run" class="w-full max-w-lg flex flex-col justify-center h-full fade-in hidden">
             <div id="card-container" class="bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-8 text-center min-h-[300px] flex flex-col justify-center items-center relative overflow-hidden">
+                
                 <!-- Progress Indicator -->
                 <div class="absolute top-0 left-0 w-full h-1 bg-slate-700">
                     <div id="progress-bar" class="h-full bg-indigo-500 transition-all duration-300" style="width: 0%"></div>
                 </div>
+
                 <div id="step-content" class="w-full">
                     <!-- Dynamic Content -->
                 </div>
             </div>
+            
             <div class="mt-6 text-center">
                 <button onclick="restartFlow()" class="text-slate-500 hover:text-slate-300 text-sm flex items-center justify-center gap-1 mx-auto transition-colors">
                     <i data-lucide="refresh-cw" class="w-3 h-3"></i> Restart Routine
@@ -152,13 +106,17 @@
             <div class="flex justify-between items-end mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-white">Workflow Editor</h2>
-                    <p class="text-slate-400 text-sm mt-1">Changes save automatically to cloud.</p>
+                    <p class="text-slate-400 text-sm mt-1">Changes save automatically to the cloud.</p>
                 </div>
                 <button onclick="addStep()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-emerald-500/10">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Step
                 </button>
             </div>
-            <div id="editor-list" class="space-y-4"></div>
+
+            <div id="editor-list" class="space-y-4">
+                <!-- Dynamic Editor Items -->
+            </div>
+            
             <div class="h-10"></div>
         </div>
 
@@ -174,18 +132,14 @@
     <!-- FIREBASE & APP LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyD3kB3DXOGmmFhbBYX_GyutMNwbC_yr10k",
-          authDomain: "stackhabits-1bbfc.firebaseapp.com",
-          projectId: "stackhabits-1bbfc",
-          storageBucket: "stackhabits-1bbfc.firebasestorage.app",
-          messagingSenderId: "659952605114",
-          appId: "1:659952605114:web:31292d2b85ef17a1f4af83"
-        };
+        // Provided by environment or placeholders
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "demo", authDomain: "demo", projectId: "demo" }; // Placeholder for local dev if needed
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'flowhabit-dev';
 
@@ -211,145 +165,47 @@
         let historyStack = [];
         let userId = null;
         let unsubscribeData = null;
-        let isLoginMode = true; // For Auth Modal
 
-        // --- AUTH LOGIC ---
+        // --- AUTH & INIT ---
         async function initAuth() {
-            // Environment variable takes precedence for dev/previews
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                try {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } catch(e) { console.error("Custom token fail", e); }
-            } else {
-                // If not logged in, we do NOT automatically sign in anonymously anymore
-                // We wait for user action or use existing persistence
-                // However, to keep app usable immediately, we check if there is a user
-                // If no user, we CAN sign in anonymously, or just let them stay "Logged Out" (but app needs userId for DB)
-                // Design Choice: Auto sign-in anonymously so the app works immediately.
-                // User can "Upgrade" to email/pass later.
-                onAuthStateChanged(auth, async (user) => {
-                    if (!user) {
-                        try {
-                            await signInAnonymously(auth);
-                        } catch (e) { console.error("Anon auth failed", e); }
-                    }
-                });
-            }
-        }
-
-        window.toggleAuthModal = function() {
-            if (userId && !auth.currentUser.isAnonymous) {
-                // If logged in as real user, button acts as Logout
-                if(confirm("Log out of " + auth.currentUser.email + "?")) {
-                    signOut(auth).then(() => {
-                        window.location.reload(); // Refresh to clear state/get new anon id
-                    });
-                }
-            } else {
-                // Show Login Modal
-                const modal = document.getElementById('auth-modal');
-                if (modal.classList.contains('hidden')) {
-                    modal.classList.remove('hidden');
-                    document.getElementById('email').focus();
-                } else {
-                    modal.classList.add('hidden');
-                }
-            }
-        }
-
-        window.switchAuthMode = function() {
-            isLoginMode = !isLoginMode;
-            document.getElementById('modal-title').innerText = isLoginMode ? 'Login' : 'Create Account';
-            document.getElementById('submit-btn').innerText = isLoginMode ? 'Log In' : 'Create Account';
-            document.getElementById('switch-text').innerText = isLoginMode ? "Don't have an account?" : "Already have an account?";
-            document.getElementById('switch-btn').innerText = isLoginMode ? 'Sign Up' : 'Log In';
-            document.getElementById('auth-error').classList.add('hidden');
-        }
-
-        window.handleAuth = async function(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('password').value;
-            const errDiv = document.getElementById('auth-error');
-            
-            errDiv.classList.add('hidden');
-            document.getElementById('submit-btn').disabled = true;
-            document.getElementById('submit-btn').innerText = 'Processing...';
-
             try {
-                if (isLoginMode) {
-                    await signInWithEmailAndPassword(auth, email, pass);
-                    // Login success - Data will sync via onAuthStateChanged
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    // Signup
-                    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-                    // IMPORTANT: On signup, save current local workflow to the new empty account immediately
-                    // so the user keeps their "Guest" work.
-                    userId = cred.user.uid;
-                    await window.saveToCloud(); 
+                    await signInAnonymously(auth);
                 }
-                toggleAuthModal();
-            } catch (error) {
-                errDiv.innerText = error.message.replace('Firebase: ', '');
-                errDiv.classList.remove('hidden');
-            } finally {
-                document.getElementById('submit-btn').disabled = false;
-                document.getElementById('submit-btn').innerText = isLoginMode ? 'Log In' : 'Create Account';
+            } catch (e) {
+                console.error("Auth error", e);
             }
         }
 
         // --- DB LOGIC ---
         function subscribeToData() {
             if (!userId) return;
-            
-            // Update UI for Auth State
-            const user = auth.currentUser;
-            const authLabel = document.getElementById('auth-label');
-            const authBtn = document.getElementById('btn-auth');
-            
-            if (user.isAnonymous) {
-                authLabel.innerText = 'Login to Sync';
-                authBtn.classList.add('bg-slate-700', 'text-slate-200');
-                authBtn.classList.remove('bg-emerald-600', 'text-white');
-            } else {
-                authLabel.innerText = user.email ? user.email.split('@')[0] : 'Account';
-                authBtn.classList.remove('bg-slate-700', 'text-slate-200');
-                authBtn.classList.add('bg-emerald-600', 'text-white'); // Active color
-            }
-
             const docRef = doc(db, 'artifacts', appId, 'users', userId, 'data', 'workflow');
             
             document.getElementById('sync-status').textContent = 'Syncing...';
-            document.getElementById('sync-status').className = 'hidden sm:inline-block text-[10px] font-normal text-yellow-500 ml-2 border border-yellow-700 px-1 rounded';
-
-            if (unsubscribeData) unsubscribeData(); // Clean up old listener
+            document.getElementById('sync-status').className = 'text-[10px] font-normal text-yellow-500 ml-2 border border-yellow-700 px-1 rounded';
 
             unsubscribeData = onSnapshot(docRef, (snap) => {
-                document.getElementById('loader').classList.add('hidden'); // Hide loader
+                document.getElementById('loader').classList.add('hidden');
                 document.getElementById('sync-status').textContent = 'Online';
-                document.getElementById('sync-status').className = 'hidden sm:inline-block text-[10px] font-normal text-emerald-500 ml-2 border border-emerald-900 px-1 rounded';
+                document.getElementById('sync-status').className = 'text-[10px] font-normal text-emerald-500 ml-2 border border-emerald-900 px-1 rounded';
                 
                 if (snap.exists()) {
-                    const data = snap.data();
-                    // Basic merge: Cloud wins.
-                    workflow = data.steps || [];
+                    workflow = snap.data().steps;
                 } else {
-                    // New account or no data: Save default if empty
-                    if (workflow.length === 0) {
-                        workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
-                    }
-                    // If we just signed up, we want to save our Current Memory to the Cloud
-                    // (Handled in handleAuth, but good backup here)
-                    if(user.isAnonymous) {
-                        saveToCloud(); 
-                    }
+                    // Initialize with default if new user
+                    workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
+                    saveToCloud(); 
                 }
                 
-                // Refresh Views
-                if(document.getElementById('editor-list').children.length === 0 || !document.getElementById('view-edit').classList.contains('hidden')) {
+                // Only render if we aren't mid-interaction to prevent jumps, 
+                // or if it's first load
+                if(document.getElementById('editor-list').children.length === 0 || document.getElementById('view-edit').classList.contains('hidden')) {
                     window.renderEditor();
                 }
-                if(document.getElementById('step-content').innerHTML === '' || !document.getElementById('view-run').classList.contains('hidden')) {
+                if(document.getElementById('step-content').innerHTML === '') {
                    window.renderRunView();
                 }
                 
@@ -377,7 +233,7 @@
             }
         }
 
-        // --- APP LOGIC (View/Logic) ---
+        // --- GLOBAL EXPORTS (for HTML event handlers) ---
         window.resetData = function() {
             if(confirm("Reset to default workflow? This cannot be undone.")) {
                 workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
@@ -392,6 +248,7 @@
             document.getElementById('view-run').classList.add('hidden');
             document.getElementById('view-edit').classList.add('hidden');
             
+            // Reset buttons
             const resetBtn = (id) => {
                 const b = document.getElementById(id);
                 b.className = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300";
@@ -430,7 +287,11 @@
 
         window.renderRunView = function() {
             if(workflow.length === 0) return;
-            if(!workflow.find(s => s.id === currentStepId)) currentStepId = workflow[0].id;
+            
+            // Auto-correct invalid start
+            if(!workflow.find(s => s.id === currentStepId)) {
+                currentStepId = workflow[0].id;
+            }
 
             const step = window.getStep(currentStepId);
             const container = document.getElementById('step-content');
@@ -476,12 +337,14 @@
                     <div class="text-emerald-400 font-bold">Good Job!</div>
                 `;
             }
+
             container.innerHTML = html;
             lucide.createIcons();
         }
 
         window.renderEditor = function() {
             const container = document.getElementById('editor-list');
+            // Save scroll position
             const scrollPos = container.parentElement.scrollTop;
             container.innerHTML = '';
 
@@ -546,6 +409,7 @@
                         </div>
                     </div>
                     ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">${logicHtml}</div>` : ''}
+                    
                     <button onclick="deleteStep(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" title="Delete Step">
                         <i data-lucide="x" class="w-3 h-3"></i>
                     </button>
@@ -553,6 +417,7 @@
                 container.appendChild(el);
             });
             lucide.createIcons();
+            // restore scroll
             container.parentElement.scrollTop = scrollPos;
         }
 
@@ -624,18 +489,14 @@
             });
         }
 
-        // Initialize Listener
+        // Initialize
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 userId = user.uid;
                 subscribeToData();
-            } else {
-                // If logged out, you might want to show a splash screen or just init as guest
-                initAuth();
             }
         });
-        
-        // Initial kick
+
         initAuth();
     </script>
 </body>
