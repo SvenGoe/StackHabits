@@ -140,12 +140,22 @@
                     <input type="password" id="auth-password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" placeholder="••••••••" required>
                 </div>
                 
-                <div id="auth-error" class="hidden text-red-400 text-sm bg-red-400/10 p-2 rounded"></div>
+                <div id="auth-error" class="hidden text-red-400 text-sm bg-red-400/10 p-2 rounded border border-red-500/20"></div>
 
                 <button type="submit" id="auth-submit-btn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-indigo-500/25 transition-all">
                     Sign In
                 </button>
             </form>
+
+            <div class="my-4 flex items-center gap-3">
+                <div class="h-px bg-slate-700 flex-1"></div>
+                <div class="text-xs text-slate-500 uppercase">Or</div>
+                <div class="h-px bg-slate-700 flex-1"></div>
+            </div>
+
+            <button onclick="window.app.handleGuestLogin()" id="guest-btn" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                <i data-lucide="ghost" class="w-4 h-4"></i> Continue as Guest
+            </button>
 
             <div class="mt-4 text-center text-sm text-slate-400">
                 <span id="auth-toggle-text">Don't have an account?</span>
@@ -163,9 +173,9 @@
 
     <!-- MODULE SCRIPT -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
         const firebaseConfig = {
@@ -177,10 +187,8 @@
             appId: "1:659952605114:web:31292d2b85ef17a1f4af83"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = "default-app-id"; // Using a static ID for this specific app instance logic
+        let app, auth, db;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // --- STATE ---
         const DEFAULT_WORKFLOW = [
@@ -206,30 +214,48 @@
         // --- CORE LOGIC ---
         
         async function init() {
+            // Fix Display: Render icons immediately so the header looks right
+            lucide.createIcons();
+            
             // Initial render with loading state or default
             renderAuthUI();
-            
-            // Listen for Auth Changes
-            onAuthStateChanged(auth, async (user) => {
-                state.user = user;
-                renderAuthUI();
 
-                if (user) {
-                    console.log("User logged in:", user.uid);
-                    await loadDataFromFirestore(user.uid);
-                } else {
-                    console.log("User logged out (Local Mode)");
-                    loadDataFromLocal();
-                }
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
 
+                // Listen for Auth Changes
+                onAuthStateChanged(auth, async (user) => {
+                    state.user = user;
+                    renderAuthUI();
+
+                    if (user) {
+                        console.log("User logged in:", user.uid);
+                        await loadDataFromFirestore(user.uid);
+                    } else {
+                        console.log("User logged out (Local Mode)");
+                        loadDataFromLocal();
+                    }
+
+                    if (state.workflow.length === 0) {
+                        state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
+                    }
+
+                    // Re-render views with data
+                    renderRunView();
+                    renderEditor();
+                });
+            } catch (error) {
+                console.error("Firebase init failed:", error);
+                // Fallback to local
+                loadDataFromLocal();
                 if (state.workflow.length === 0) {
                     state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
                 }
-
-                lucide.createIcons();
                 renderRunView();
                 renderEditor();
-            });
+            }
         }
 
         // Data Handling
@@ -244,25 +270,23 @@
 
         async function loadDataFromFirestore(uid) {
             try {
-                // Rule: /artifacts/{appId}/users/{userId}/data
-                const docRef = doc(db, "artifacts", appId, "users", uid, "flowhabit_data");
+                // Corrected path to include sub-collection 'data'
+                const docRef = doc(db, "artifacts", appId, "users", uid, "data", "flowhabit");
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     if(data.workflow) {
                         state.workflow = data.workflow;
-                        // Also update local storage for offline backup
                         localStorage.setItem("flowhabit_data", JSON.stringify(state.workflow));
                     }
                 } else {
-                    // New cloud user: check if we should upload local data?
-                    // For now, let's just upload current local data to init their cloud account
+                    // New cloud user: upload local data to init their cloud account
                     await saveData(true); 
                 }
             } catch (error) {
                 console.error("Error loading from Firestore:", error);
-                alert("Could not sync with cloud. Using local data.");
+                // If permission denied (API key issue) or offline, fallback to local
                 loadDataFromLocal();
             }
         }
@@ -274,7 +298,8 @@
             // 2. Save Cloud (if logged in)
             if (state.user) {
                 try {
-                    const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "flowhabit_data");
+                     // Corrected path to include sub-collection 'data'
+                    const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "flowhabit");
                     await setDoc(docRef, {
                         workflow: state.workflow,
                         updatedAt: new Date().toISOString()
@@ -291,8 +316,7 @@
         }
 
         function showToast(msg, isError = false) {
-            // Simple toast logic could go here, for now using console
-            console.log(msg);
+            console.log(msg); // Can be enhanced with visual toast later
         }
 
         function resetData() {
@@ -314,17 +338,20 @@
             const dropdown = document.getElementById('auth-dropdown-content');
             const userBtn = document.getElementById('user-btn');
 
+            if (!statusText || !dropdown || !userBtn) return;
+
             if (state.user) {
-                statusText.innerText = state.user.email.split('@')[0]; // Show username
+                const displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
+                statusText.innerText = displayName;
                 userBtn.classList.add('text-indigo-400');
                 dropdown.innerHTML = `
-                    <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.email}</div>
+                    <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.isAnonymous ? 'Guest User' : state.user.email}</div>
                     <button onclick="window.app.doLogout()" class="w-full text-left px-2 py-1.5 text-sm text-red-400 hover:bg-slate-700 rounded transition-colors">
                         Sign Out
                     </button>
                 `;
             } else {
-                statusText.innerText = "Local Mode";
+                statusText.innerText = "Local";
                 userBtn.classList.remove('text-indigo-400');
                 dropdown.innerHTML = `
                     <div class="text-xs text-slate-500 mb-2 px-2">Sync across devices</div>
@@ -383,8 +410,8 @@
                     await createUserWithEmailAndPassword(auth, email, password);
                 }
                 closeAuthModal();
-                // onAuthStateChanged will handle the rest
             } catch (error) {
+                console.error("Auth Error:", error);
                 errorBox.innerText = error.message.replace('Firebase: ', '');
                 errorBox.classList.remove('hidden');
             } finally {
@@ -393,11 +420,21 @@
             }
         }
 
+        async function handleGuestLogin() {
+             const errorBox = document.getElementById('auth-error');
+             try {
+                await signInAnonymously(auth);
+                closeAuthModal();
+             } catch (error) {
+                console.error("Guest Auth Error:", error);
+                errorBox.innerText = "Guest login failed: " + error.message;
+                errorBox.classList.remove('hidden');
+             }
+        }
+
         async function doLogout() {
             try {
                 await signOut(auth);
-                // State resets via onAuthStateChanged -> returns to Local Mode
-                // Note: We leave local storage intact so they don't lose data immediately upon logout
             } catch (error) {
                 console.error("Logout failed", error);
             }
@@ -408,7 +445,6 @@
             document.getElementById('view-run').classList.add('hidden');
             document.getElementById('view-edit').classList.add('hidden');
             
-            // Reset styles
             ['btn-run', 'btn-edit'].forEach(id => {
                 const btn = document.getElementById(id);
                 btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
@@ -429,6 +465,7 @@
         }
 
         function renderRunView() {
+            if(state.workflow.length === 0) return;
             const step = state.workflow.find(s => s.id === state.currentStepId) || { type: 'end', text: 'Step not found' };
             const container = document.getElementById('step-content');
             
@@ -603,7 +640,7 @@
         // Attach to window for HTML event handlers
         window.app = {
             switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, exportPDF,
-            openAuthModal, closeAuthModal, toggleAuthMode, handleAuthSubmit, doLogout, renderAuthUI
+            openAuthModal, closeAuthModal, toggleAuthMode, handleAuthSubmit, handleGuestLogin, doLogout, renderAuthUI
         };
 
         // Event Listeners
