@@ -224,6 +224,7 @@
 
         // --- CONSTANTS ---
         const LOCAL_STORAGE_KEY = "stackhabits_local"; 
+        const COMPLETED_FLOW_ID = "COMPLETED_FLOW";
 
         // --- STATE ---
         const DEFAULT_WORKFLOW = [
@@ -305,6 +306,10 @@
         // Validate that currentStepId actually points to a real step
         function validateCurrentStep() {
             if(state.workflow.length === 0) return;
+            
+            // Allow the completed state to exist
+            if(state.currentStepId === COMPLETED_FLOW_ID) return;
+
             const exists = state.workflow.find(s => s.id === state.currentStepId);
             if (!exists) {
                 // If "start" is missing, fallback to first step
@@ -475,16 +480,31 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<div class="loader mx-auto"></div>';
 
-            try {
-                if (state.isAuthModeLogin) {
-                    await signInWithEmailAndPassword(auth, email, password);
-                } else {
-                    await createUserWithEmailAndPassword(auth, email, password);
+            const attemptAuth = async (retries = 1) => {
+                try {
+                    if (state.isAuthModeLogin) {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    } else {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    }
+                } catch (error) {
+                    if (retries > 0 && error.code === 'auth/network-request-failed') {
+                        console.warn("Auth network error, retrying...", error);
+                        await new Promise(r => setTimeout(r, 500)); // wait 500ms
+                        await attemptAuth(retries - 1);
+                    } else {
+                        throw error;
+                    }
                 }
+            };
+
+            try {
+                await attemptAuth();
                 closeAuthModal();
             } catch (error) {
                 console.error("Auth Error:", error);
-                errorBox.innerText = error.message.replace('Firebase: ', '');
+                const msg = error.code ? error.code.replace('auth/', '').replace(/-/g, ' ') : error.message;
+                errorBox.innerText = msg;
                 errorBox.classList.remove('hidden');
             } finally {
                 submitBtn.disabled = false;
@@ -541,6 +561,21 @@
         function renderRunView() {
             const container = document.getElementById('step-content');
             
+            // 1. Check for Completed State
+            if (state.currentStepId === COMPLETED_FLOW_ID) {
+                document.getElementById('progress-bar').style.width = '100%';
+                container.innerHTML = `
+                    <div class="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-900/30 text-emerald-400 mb-6 animate-bounce-slow">
+                        <i data-lucide="check-circle" class="w-10 h-10"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-4 leading-tight text-white">Routine Complete!</h2>
+                    <p class="text-slate-400 mb-8 text-lg">You have completed your routine.</p>
+                    <div class="text-emerald-400 font-bold text-2xl tracking-wide">Good Job!</div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
             if(state.workflow.length === 0) {
                 container.innerHTML = `<div class="text-slate-400">No steps defined. Go to Edit Flow.</div>`;
                 return;
@@ -605,10 +640,9 @@
                      state.historyStack.push(state.currentStepId);
                      state.currentStepId = endStep.id;
                 } else {
-                    // Fallback if no end step exists at all
-                    alert("Routine Finished!");
-                    state.currentStepId = state.workflow[0].id; // Only then reset
-                    state.historyStack = [];
+                    // Fallback if no end step exists: Show Generic Success Screen
+                    state.historyStack.push(state.currentStepId);
+                    state.currentStepId = COMPLETED_FLOW_ID;
                 }
             } else {
                 state.historyStack.push(state.currentStepId);
