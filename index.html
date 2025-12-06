@@ -48,6 +48,31 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Toast Notification */
+        #toast {
+            visibility: hidden;
+            min-width: 250px; 
+            background-color: #333; 
+            color: #fff; 
+            text-align: center; 
+            border-radius: 8px; 
+            padding: 16px; 
+            position: fixed; 
+            z-index: 100; 
+            left: 50%; 
+            bottom: 30px; 
+            transform: translateX(-50%);
+            font-size: 14px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -57,6 +82,8 @@
         <div class="flex items-center gap-2 font-bold text-lg tracking-tight">
             <i data-lucide="git-merge" class="text-indigo-400"></i>
             <span class="hidden sm:inline">FlowHabit</span>
+            <!-- Connection Indicator -->
+            <div id="connection-status" class="w-2 h-2 rounded-full bg-red-500 ml-2" title="Disconnected"></div>
         </div>
         
         <!-- Auth Status & Controls -->
@@ -164,6 +191,9 @@
         </div>
     </div>
 
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast">Saved to Cloud</div>
+
     <!-- PRINT VIEW -->
     <div id="print-view" class="print-only p-8 bg-white text-black min-h-screen">
         <h1 class="text-3xl font-bold border-b-2 border-black pb-4 mb-6">My Routine Logic</h1>
@@ -175,7 +205,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
         const firebaseConfig = {
@@ -188,6 +218,7 @@
         };
 
         let app, auth, db;
+        // Use environment App ID if available (for preview), else fallback to generic default
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // --- STATE ---
@@ -208,17 +239,16 @@
             currentStepId: "start",
             historyStack: [],
             user: null,
-            isAuthModeLogin: true
+            isAuthModeLogin: true,
+            isOnline: false
         };
 
         // --- CORE LOGIC ---
         
         async function init() {
-            // Fix Display: Render icons immediately so the header looks right
             lucide.createIcons();
-            
-            // Initial render with loading state or default
             renderAuthUI();
+            updateConnectionStatus(false);
 
             try {
                 app = initializeApp(firebaseConfig);
@@ -232,29 +262,45 @@
 
                     if (user) {
                         console.log("User logged in:", user.uid);
+                        updateConnectionStatus(true);
                         await loadDataFromFirestore(user.uid);
                     } else {
                         console.log("User logged out (Local Mode)");
+                        updateConnectionStatus(false);
                         loadDataFromLocal();
                     }
 
-                    if (state.workflow.length === 0) {
+                    if (!state.workflow || state.workflow.length === 0) {
                         state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
                     }
+                    
+                    // Sanity check: ensure current step exists, else reset
+                    validateCurrentStep();
 
-                    // Re-render views with data
                     renderRunView();
                     renderEditor();
                 });
             } catch (error) {
                 console.error("Firebase init failed:", error);
-                // Fallback to local
+                showToast("Offline Mode (Firebase Init Failed)", true);
                 loadDataFromLocal();
-                if (state.workflow.length === 0) {
+                if (!state.workflow || state.workflow.length === 0) {
                     state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
                 }
+                validateCurrentStep();
                 renderRunView();
                 renderEditor();
+            }
+        }
+
+        // Validate that currentStepId actually points to a real step
+        function validateCurrentStep() {
+            if(state.workflow.length === 0) return;
+            const exists = state.workflow.find(s => s.id === state.currentStepId);
+            if (!exists) {
+                // If "start" or whatever current id is missing, fallback to index 0
+                state.currentStepId = state.workflow[0].id;
+                state.historyStack = [];
             }
         }
 
@@ -270,23 +316,24 @@
 
         async function loadDataFromFirestore(uid) {
             try {
-                // Corrected path to include sub-collection 'data'
+                // Path: /artifacts/{appId}/users/{uid}/data/flowhabit
                 const docRef = doc(db, "artifacts", appId, "users", uid, "data", "flowhabit");
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if(data.workflow) {
+                    if(data.workflow && Array.isArray(data.workflow)) {
                         state.workflow = data.workflow;
                         localStorage.setItem("flowhabit_data", JSON.stringify(state.workflow));
+                        showToast("Synced with Cloud");
                     }
                 } else {
-                    // New cloud user: upload local data to init their cloud account
+                    // New cloud user: upload local data
                     await saveData(true); 
                 }
             } catch (error) {
                 console.error("Error loading from Firestore:", error);
-                // If permission denied (API key issue) or offline, fallback to local
+                showToast("Sync Error: Using Local Data", true);
                 loadDataFromLocal();
             }
         }
@@ -298,16 +345,17 @@
             // 2. Save Cloud (if logged in)
             if (state.user) {
                 try {
-                     // Corrected path to include sub-collection 'data'
                     const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "flowhabit");
                     await setDoc(docRef, {
                         workflow: state.workflow,
                         updatedAt: new Date().toISOString()
                     });
                     showToast("Saved to Cloud");
+                    updateConnectionStatus(true);
                 } catch (e) {
                     console.error("Cloud save failed", e);
-                    showToast("Saved Locally (Cloud Error)", true);
+                    showToast("Save Failed: Permission Denied or Offline", true);
+                    updateConnectionStatus(false);
                 }
             } else {
                 if(!forceCloud) showToast("Saved Locally");
@@ -316,7 +364,20 @@
         }
 
         function showToast(msg, isError = false) {
-            console.log(msg); // Can be enhanced with visual toast later
+            const el = document.getElementById("toast");
+            el.innerText = msg;
+            el.style.backgroundColor = isError ? "#dc2626" : "#10b981"; // Red vs Green
+            el.className = "show";
+            setTimeout(() => { el.className = el.className.replace("show", ""); }, 3000);
+        }
+
+        function updateConnectionStatus(isOnline) {
+            state.isOnline = isOnline;
+            const el = document.getElementById('connection-status');
+            if(el) {
+                el.className = `w-2 h-2 rounded-full ml-2 ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`;
+                el.title = isOnline ? "Connected to Cloud" : "Offline / Error";
+            }
         }
 
         function resetData() {
@@ -332,7 +393,6 @@
         }
 
         // --- AUTH UI LOGIC ---
-
         function renderAuthUI() {
             const statusText = document.getElementById('user-status-text');
             const dropdown = document.getElementById('auth-dropdown-content');
@@ -457,6 +517,8 @@
 
             if (viewName === 'run') {
                 document.getElementById('view-run').classList.remove('hidden');
+                // Ensure state is valid before rendering
+                validateCurrentStep();
                 renderRunView();
             } else {
                 document.getElementById('view-edit').classList.remove('hidden');
@@ -465,9 +527,19 @@
         }
 
         function renderRunView() {
-            if(state.workflow.length === 0) return;
-            const step = state.workflow.find(s => s.id === state.currentStepId) || { type: 'end', text: 'Step not found' };
             const container = document.getElementById('step-content');
+            
+            if(state.workflow.length === 0) {
+                container.innerHTML = `<div class="text-slate-400">No steps defined. Go to Edit Flow.</div>`;
+                return;
+            }
+
+            // Fallback: if currentStepId is garbage, reset to first step
+            let step = state.workflow.find(s => s.id === state.currentStepId);
+            if (!step) {
+                step = state.workflow[0];
+                state.currentStepId = step.id;
+            }
             
             const total = state.workflow.length;
             const currentIdx = state.historyStack.length;
@@ -516,7 +588,11 @@
         }
 
         function restartFlow() {
-            state.currentStepId = "start";
+            if(state.workflow.length > 0) {
+                // Determine the "real" start. ID 'start' or first item.
+                const startStep = state.workflow.find(s=>s.id==='start');
+                state.currentStepId = startStep ? 'start' : state.workflow[0].id;
+            }
             state.historyStack = [];
             renderRunView();
         }
