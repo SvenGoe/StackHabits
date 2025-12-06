@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlowHabit</title>
-    <meta name="description" content="A local conditional habit tracker">
+    <title>FlowHabit - Cloud Sync</title>
+    <meta name="description" content="A conditional habit tracker with cloud sync">
     <meta name="theme-color" content="#1e293b">
     <meta name="mobile-web-app-capable" content="yes">
     
-    <!-- Tailwind CSS (via CDN for styling) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Icons -->
@@ -16,19 +16,10 @@
 
     <style>
         /* Custom Scrollbar for dark mode */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569; 
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         /* Print Styles */
         @media print {
@@ -37,17 +28,26 @@
             body { background: white; color: black; }
             #app-container { box-shadow: none; border: none; }
         }
-        
         .print-only { display: none; }
         
         /* Smooth transitions */
-        .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
-        }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #6366f1;
+            width: 20px;
+            height: 20px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -56,21 +56,35 @@
     <nav class="no-print h-14 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 shrink-0 z-50">
         <div class="flex items-center gap-2 font-bold text-lg tracking-tight">
             <i data-lucide="git-merge" class="text-indigo-400"></i>
-            <span>FlowHabit</span>
+            <span class="hidden sm:inline">FlowHabit</span>
         </div>
-        <div class="flex gap-2">
-            <button onclick="switchView('run')" id="btn-run" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
-                Run
-            </button>
-            <button onclick="switchView('edit')" id="btn-edit" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">
-                Edit Flow
-            </button>
-            <button onclick="exportPDF()" class="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Export to PDF">
+        
+        <!-- Auth Status & Controls -->
+        <div class="flex items-center gap-2">
+            <!-- View Switchers -->
+            <button onclick="window.app.switchView('run')" id="btn-run" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">Run</button>
+            <button onclick="window.app.switchView('edit')" id="btn-edit" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Edit</button>
+            
+            <div class="h-6 w-px bg-slate-700 mx-1"></div>
+
+            <!-- Action Buttons -->
+            <button onclick="window.app.exportPDF()" class="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Export to PDF">
                 <i data-lucide="printer" class="w-4 h-4"></i>
             </button>
-            <button onclick="resetData()" class="p-2 rounded-md text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors" title="Reset Default">
-                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-            </button>
+            
+            <!-- User Menu -->
+            <div class="relative group">
+                <button id="user-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors border border-transparent hover:border-slate-600">
+                    <i data-lucide="user" class="w-4 h-4"></i>
+                    <span id="user-status-text" class="hidden sm:inline">Local</span>
+                </button>
+                <!-- Dropdown -->
+                <div class="absolute right-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <div id="auth-dropdown-content" class="p-2">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -80,19 +94,13 @@
         <!-- RUN VIEW -->
         <div id="view-run" class="w-full max-w-lg flex flex-col justify-center h-full fade-in">
             <div id="card-container" class="bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-8 text-center min-h-[300px] flex flex-col justify-center items-center relative overflow-hidden">
-                
-                <!-- Progress Indicator -->
                 <div class="absolute top-0 left-0 w-full h-1 bg-slate-700">
                     <div id="progress-bar" class="h-full bg-indigo-500 transition-all duration-300" style="width: 0%"></div>
                 </div>
-
-                <div id="step-content" class="w-full">
-                    <!-- Dynamic Content -->
-                </div>
+                <div id="step-content" class="w-full"></div>
             </div>
-            
             <div class="mt-6 text-center">
-                <button onclick="restartFlow()" class="text-slate-500 hover:text-slate-300 text-sm flex items-center justify-center gap-1 mx-auto transition-colors">
+                <button onclick="window.app.restartFlow()" class="text-slate-500 hover:text-slate-300 text-sm flex items-center justify-center gap-1 mx-auto transition-colors">
                     <i data-lucide="refresh-cw" class="w-3 h-3"></i> Restart Routine
                 </button>
             </div>
@@ -103,36 +111,78 @@
             <div class="flex justify-between items-end mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-white">Workflow Editor</h2>
-                    <p class="text-slate-400 text-sm mt-1">Define steps and conditions. Use IDs to link steps together.</p>
+                    <p class="text-slate-400 text-sm mt-1">Define steps and conditions.</p>
                 </div>
-                <button onclick="addStep()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-emerald-500/10">
+                <button onclick="window.app.addStep()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-emerald-500/10">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Step
                 </button>
             </div>
-
-            <div id="editor-list" class="space-y-4">
-                <!-- Dynamic Editor Items -->
-            </div>
-            
-            <div class="h-10"></div> <!-- Spacer -->
+            <div id="editor-list" class="space-y-4"></div>
+            <div class="h-10"></div>
         </div>
 
     </main>
 
-    <!-- PRINT/PDF VIEW (Hidden unless printing) -->
-    <div id="print-view" class="print-only p-8 bg-white text-black min-h-screen">
-        <h1 class="text-3xl font-bold border-b-2 border-black pb-4 mb-6">My Routine Logic</h1>
-        <div id="print-content" class="space-y-6">
-            <!-- Rendered Linear Flow -->
-        </div>
-        <div class="mt-12 text-xs text-gray-500 border-t pt-4">
-            Generated by FlowHabit
+    <!-- AUTH MODAL -->
+    <div id="auth-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <button onclick="window.app.closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <h2 class="text-xl font-bold mb-6 text-center" id="auth-title">Sign In</h2>
+            
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs uppercase font-bold text-slate-500 mb-1">Email</label>
+                    <input type="email" id="auth-email" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" placeholder="you@example.com" required>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase font-bold text-slate-500 mb-1">Password</label>
+                    <input type="password" id="auth-password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" placeholder="••••••••" required>
+                </div>
+                
+                <div id="auth-error" class="hidden text-red-400 text-sm bg-red-400/10 p-2 rounded"></div>
+
+                <button type="submit" id="auth-submit-btn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-indigo-500/25 transition-all">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="mt-4 text-center text-sm text-slate-400">
+                <span id="auth-toggle-text">Don't have an account?</span>
+                <button onclick="window.app.toggleAuthMode()" class="text-indigo-400 hover:text-indigo-300 font-bold ml-1" id="auth-toggle-btn">Sign Up</button>
+            </div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
-    <script>
-        // --- DATA MODEL ---
+    <!-- PRINT VIEW -->
+    <div id="print-view" class="print-only p-8 bg-white text-black min-h-screen">
+        <h1 class="text-3xl font-bold border-b-2 border-black pb-4 mb-6">My Routine Logic</h1>
+        <div id="print-content" class="space-y-6"></div>
+        <div class="mt-12 text-xs text-gray-500 border-t pt-4">Generated by FlowHabit</div>
+    </div>
+
+    <!-- MODULE SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3kB3DXOGmmFhbBYX_GyutMNwbC_yr10k",
+            authDomain: "stackhabits-1bbfc.firebaseapp.com",
+            projectId: "stackhabits-1bbfc",
+            storageBucket: "stackhabits-1bbfc.firebasestorage.app",
+            messagingSenderId: "659952605114",
+            appId: "1:659952605114:web:31292d2b85ef17a1f4af83"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "default-app-id"; // Using a static ID for this specific app instance logic
+
+        // --- STATE ---
         const DEFAULT_WORKFLOW = [
             { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee" },
             { id: "gym-prep", type: "task", text: "Pack gym clothes & water", next: "protein" },
@@ -145,101 +195,254 @@
             { id: "end", type: "end", text: "Routine Complete!", next: null }
         ];
 
-        let workflow = [];
-        let currentStepId = "start";
-        let historyStack = [];
+        let state = {
+            workflow: [],
+            currentStepId: "start",
+            historyStack: [],
+            user: null,
+            isAuthModeLogin: true
+        };
 
-        // --- INIT ---
-        function init() {
+        // --- CORE LOGIC ---
+        
+        async function init() {
+            // Initial render with loading state or default
+            renderAuthUI();
+            
+            // Listen for Auth Changes
+            onAuthStateChanged(auth, async (user) => {
+                state.user = user;
+                renderAuthUI();
+
+                if (user) {
+                    console.log("User logged in:", user.uid);
+                    await loadDataFromFirestore(user.uid);
+                } else {
+                    console.log("User logged out (Local Mode)");
+                    loadDataFromLocal();
+                }
+
+                if (state.workflow.length === 0) {
+                    state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
+                }
+
+                lucide.createIcons();
+                renderRunView();
+                renderEditor();
+            });
+        }
+
+        // Data Handling
+        function loadDataFromLocal() {
             const saved = localStorage.getItem("flowhabit_data");
             if (saved) {
-                workflow = JSON.parse(saved);
-            } else {
-                workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
+                try {
+                    state.workflow = JSON.parse(saved);
+                } catch(e) { console.error("Local data corrupt", e); }
             }
-            lucide.createIcons();
-            renderRunView();
+        }
+
+        async function loadDataFromFirestore(uid) {
+            try {
+                // Rule: /artifacts/{appId}/users/{userId}/data
+                const docRef = doc(db, "artifacts", appId, "users", uid, "flowhabit_data");
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if(data.workflow) {
+                        state.workflow = data.workflow;
+                        // Also update local storage for offline backup
+                        localStorage.setItem("flowhabit_data", JSON.stringify(state.workflow));
+                    }
+                } else {
+                    // New cloud user: check if we should upload local data?
+                    // For now, let's just upload current local data to init their cloud account
+                    await saveData(true); 
+                }
+            } catch (error) {
+                console.error("Error loading from Firestore:", error);
+                alert("Could not sync with cloud. Using local data.");
+                loadDataFromLocal();
+            }
+        }
+
+        async function saveData(forceCloud = false) {
+            // 1. Save Local
+            localStorage.setItem("flowhabit_data", JSON.stringify(state.workflow));
+
+            // 2. Save Cloud (if logged in)
+            if (state.user) {
+                try {
+                    const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "flowhabit_data");
+                    await setDoc(docRef, {
+                        workflow: state.workflow,
+                        updatedAt: new Date().toISOString()
+                    });
+                    showToast("Saved to Cloud");
+                } catch (e) {
+                    console.error("Cloud save failed", e);
+                    showToast("Saved Locally (Cloud Error)", true);
+                }
+            } else {
+                if(!forceCloud) showToast("Saved Locally");
+            }
             renderEditor();
         }
 
-        function save() {
-            localStorage.setItem("flowhabit_data", JSON.stringify(workflow));
-            renderEditor(); // Update dropdowns
+        function showToast(msg, isError = false) {
+            // Simple toast logic could go here, for now using console
+            console.log(msg);
         }
 
         function resetData() {
-            if(confirm("Reset to default workflow? This cannot be undone.")) {
-                workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
-                save();
-                restartFlow();
+            if(confirm("Reset to default workflow?")) {
+                state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
+                state.currentStepId = "start";
+                state.historyStack = [];
+                saveData();
+                renderRunView();
                 renderEditor();
                 switchView('run');
             }
         }
 
-        // --- NAVIGATION ---
+        // --- AUTH UI LOGIC ---
+
+        function renderAuthUI() {
+            const statusText = document.getElementById('user-status-text');
+            const dropdown = document.getElementById('auth-dropdown-content');
+            const userBtn = document.getElementById('user-btn');
+
+            if (state.user) {
+                statusText.innerText = state.user.email.split('@')[0]; // Show username
+                userBtn.classList.add('text-indigo-400');
+                dropdown.innerHTML = `
+                    <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.email}</div>
+                    <button onclick="window.app.doLogout()" class="w-full text-left px-2 py-1.5 text-sm text-red-400 hover:bg-slate-700 rounded transition-colors">
+                        Sign Out
+                    </button>
+                `;
+            } else {
+                statusText.innerText = "Local Mode";
+                userBtn.classList.remove('text-indigo-400');
+                dropdown.innerHTML = `
+                    <div class="text-xs text-slate-500 mb-2 px-2">Sync across devices</div>
+                    <button onclick="window.app.openAuthModal()" class="w-full text-left px-2 py-1.5 text-sm text-indigo-400 hover:bg-slate-700 rounded transition-colors">
+                        Sign In / Register
+                    </button>
+                `;
+            }
+        }
+
+        function openAuthModal() {
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-email').focus();
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('auth-error').classList.add('hidden');
+        }
+
+        function toggleAuthMode() {
+            state.isAuthModeLogin = !state.isAuthModeLogin;
+            const title = document.getElementById('auth-title');
+            const btn = document.getElementById('auth-submit-btn');
+            const toggleText = document.getElementById('auth-toggle-text');
+            const toggleBtn = document.getElementById('auth-toggle-btn');
+
+            if(state.isAuthModeLogin) {
+                title.innerText = "Sign In";
+                btn.innerText = "Sign In";
+                toggleText.innerText = "Don't have an account?";
+                toggleBtn.innerText = "Sign Up";
+            } else {
+                title.innerText = "Create Account";
+                btn.innerText = "Create Account";
+                toggleText.innerText = "Already have an account?";
+                toggleBtn.innerText = "Sign In";
+            }
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorBox = document.getElementById('auth-error');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            
+            errorBox.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loader mx-auto"></div>';
+
+            try {
+                if (state.isAuthModeLogin) {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                }
+                closeAuthModal();
+                // onAuthStateChanged will handle the rest
+            } catch (error) {
+                errorBox.innerText = error.message.replace('Firebase: ', '');
+                errorBox.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = state.isAuthModeLogin ? "Sign In" : "Create Account";
+            }
+        }
+
+        async function doLogout() {
+            try {
+                await signOut(auth);
+                // State resets via onAuthStateChanged -> returns to Local Mode
+                // Note: We leave local storage intact so they don't lose data immediately upon logout
+            } catch (error) {
+                console.error("Logout failed", error);
+            }
+        }
+
+        // --- RUN VIEW LOGIC ---
         function switchView(viewName) {
             document.getElementById('view-run').classList.add('hidden');
             document.getElementById('view-edit').classList.add('hidden');
-            document.getElementById('btn-run').classList.replace('bg-indigo-600', 'hover:bg-slate-700');
-            document.getElementById('btn-run').classList.remove('text-white', 'shadow-lg');
-            document.getElementById('btn-run').classList.add('text-slate-300');
             
-            document.getElementById('btn-edit').classList.replace('bg-indigo-600', 'hover:bg-slate-700');
-            document.getElementById('btn-edit').classList.remove('text-white', 'shadow-lg');
-            document.getElementById('btn-edit').classList.add('text-slate-300');
+            // Reset styles
+            ['btn-run', 'btn-edit'].forEach(id => {
+                const btn = document.getElementById(id);
+                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+                btn.classList.add('hover:bg-slate-700', 'text-slate-300');
+            });
+
+            const activeBtn = document.getElementById(`btn-${viewName}`);
+            activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+            activeBtn.classList.remove('hover:bg-slate-700', 'text-slate-300');
 
             if (viewName === 'run') {
                 document.getElementById('view-run').classList.remove('hidden');
-                const btn = document.getElementById('btn-run');
-                btn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-                btn.classList.remove('hover:bg-slate-700', 'text-slate-300');
                 renderRunView();
             } else {
                 document.getElementById('view-edit').classList.remove('hidden');
-                const btn = document.getElementById('btn-edit');
-                btn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-                btn.classList.remove('hover:bg-slate-700', 'text-slate-300');
                 renderEditor();
             }
         }
 
-        // --- RUN LOGIC ---
-        function getStep(id) {
-            return workflow.find(s => s.id === id) || { type: 'end', text: 'Step not found' };
-        }
-
-        function nextStep(targetId) {
-            historyStack.push(currentStepId);
-            currentStepId = targetId;
-            renderRunView();
-        }
-
-        function restartFlow() {
-            currentStepId = "start";
-            historyStack = [];
-            renderRunView();
-        }
-
         function renderRunView() {
-            const step = getStep(currentStepId);
+            const step = state.workflow.find(s => s.id === state.currentStepId) || { type: 'end', text: 'Step not found' };
             const container = document.getElementById('step-content');
             
-            // Calc approximate progress (naive)
-            const total = workflow.length;
-            const currentIdx = historyStack.length;
+            const total = state.workflow.length;
+            const currentIdx = state.historyStack.length;
             const pct = Math.min((currentIdx / (total * 0.7)) * 100, 100); 
             document.getElementById('progress-bar').style.width = step.type === 'end' ? '100%' : `${pct}%`;
 
-            let html = '';
-
-            // Icon Mapping
             let icon = 'circle';
             if(step.type === 'decision') icon = 'git-branch';
             if(step.type === 'end') icon = 'check-circle';
             if(step.type === 'task') icon = 'check-square';
 
-            html += `
+            let html = `
                 <div class="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-700/50 text-indigo-400 mb-4 animate-bounce-slow">
                     <i data-lucide="${icon}" class="w-8 h-8"></i>
                 </div>
@@ -249,17 +452,13 @@
             if (step.type === 'decision') {
                 html += `
                     <div class="grid grid-cols-2 gap-4 w-full">
-                        <button onclick="nextStep('${step.nextIfYes}')" class="py-4 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-transform active:scale-95 shadow-lg shadow-indigo-500/25">
-                            Yes
-                        </button>
-                        <button onclick="nextStep('${step.nextIfNo}')" class="py-4 px-6 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-semibold transition-transform active:scale-95">
-                            No
-                        </button>
+                        <button onclick="window.app.nextStep('${step.nextIfYes}')" class="py-4 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-transform active:scale-95 shadow-lg shadow-indigo-500/25">Yes</button>
+                        <button onclick="window.app.nextStep('${step.nextIfNo}')" class="py-4 px-6 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-semibold transition-transform active:scale-95">No</button>
                     </div>
                 `;
             } else if (step.type === 'task') {
                 html += `
-                    <button onclick="nextStep('${step.next}')" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-lg transition-transform active:scale-95 shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2">
+                    <button onclick="window.app.nextStep('${step.next}')" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-lg transition-transform active:scale-95 shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2">
                         Next Step <i data-lucide="arrow-right" class="w-5 h-5"></i>
                     </button>
                 `;
@@ -269,9 +468,20 @@
                     <div class="text-emerald-400 font-bold">Good Job!</div>
                 `;
             }
-
             container.innerHTML = html;
             lucide.createIcons();
+        }
+
+        function nextStep(targetId) {
+            state.historyStack.push(state.currentStepId);
+            state.currentStepId = targetId;
+            renderRunView();
+        }
+
+        function restartFlow() {
+            state.currentStepId = "start";
+            state.historyStack = [];
+            renderRunView();
         }
 
         // --- EDITOR LOGIC ---
@@ -279,62 +489,52 @@
             const container = document.getElementById('editor-list');
             container.innerHTML = '';
 
-            workflow.forEach((step, index) => {
+            state.workflow.forEach((step, index) => {
                 const el = document.createElement('div');
                 el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-4 relative group';
                 
-                // Helper to generate Dropdown options
                 const getOptions = (selected) => {
                     let opts = `<option value="">-- End Routine --</option>`;
-                    workflow.forEach(s => {
+                    state.workflow.forEach(s => {
                         opts += `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.text.substring(0, 20)}${s.text.length>20?'...':''} (${s.id})</option>`;
                     });
                     return opts;
                 };
 
-                // Conditional Logic Form
                 let logicHtml = '';
                 if(step.type === 'task') {
                     logicHtml = `
                         <div class="flex flex-col">
                             <label class="text-xs text-slate-500 uppercase font-bold mb-1">Next Step</label>
-                            <select onchange="updateStep(${index}, 'next', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
-                                ${getOptions(step.next)}
-                            </select>
-                        </div>
-                    `;
+                            <select onchange="window.app.updateStep(${index}, 'next', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.next)}</select>
+                        </div>`;
                 } else if (step.type === 'decision') {
                     logicHtml = `
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col">
-                                <label class="text-xs text-slate-500 uppercase font-bold mb-1">If Yes -> Go To</label>
-                                <select onchange="updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
-                                    ${getOptions(step.nextIfYes)}
-                                </select>
+                                <label class="text-xs text-slate-500 uppercase font-bold mb-1">If Yes</label>
+                                <select onchange="window.app.updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfYes)}</select>
                             </div>
                             <div class="flex flex-col">
-                                <label class="text-xs text-slate-500 uppercase font-bold mb-1">If No -> Go To</label>
-                                <select onchange="updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
-                                    ${getOptions(step.nextIfNo)}
-                                </select>
+                                <label class="text-xs text-slate-500 uppercase font-bold mb-1">If No</label>
+                                <select onchange="window.app.updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfNo)}</select>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 }
 
                 el.innerHTML = `
                     <div class="flex justify-between items-start gap-4">
                         <div class="w-1/4 min-w-[100px]">
-                            <label class="text-xs text-slate-500 uppercase font-bold">ID (Unique)</label>
-                            <input type="text" value="${step.id}" onchange="updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none">
+                            <label class="text-xs text-slate-500 uppercase font-bold">ID</label>
+                            <input type="text" value="${step.id}" onchange="window.app.updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none">
                         </div>
                         <div class="flex-1">
                             <label class="text-xs text-slate-500 uppercase font-bold">Display Text</label>
-                            <input type="text" value="${step.text}" onchange="updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none">
+                            <input type="text" value="${step.text}" onchange="window.app.updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none">
                         </div>
                          <div class="w-24">
                             <label class="text-xs text-slate-500 uppercase font-bold">Type</label>
-                            <select onchange="updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
+                            <select onchange="window.app.updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
                                 <option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option>
                                 <option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option>
                                 <option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option>
@@ -342,10 +542,7 @@
                         </div>
                     </div>
                     ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">${logicHtml}</div>` : ''}
-                    
-                    <button onclick="deleteStep(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" title="Delete Step">
-                        <i data-lucide="x" class="w-3 h-3"></i>
-                    </button>
+                    <button onclick="window.app.deleteStep(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
                 `;
                 container.appendChild(el);
             });
@@ -353,53 +550,40 @@
         }
 
         function updateStep(index, field, value) {
-            workflow[index][field] = value;
-            save();
-            // Re-render if type changed to update logic fields
+            state.workflow[index][field] = value;
+            saveData();
             if(field === 'type') renderEditor();
         }
 
         function addStep() {
-            const newId = "step-" + Math.floor(Math.random() * 1000);
-            workflow.push({ id: newId, type: "task", text: "New Step", next: "" });
-            save();
+            const newId = "step-" + Math.floor(Math.random() * 10000);
+            state.workflow.push({ id: newId, type: "task", text: "New Step", next: "" });
+            saveData();
             renderEditor();
-            // Scroll to bottom
             setTimeout(() => {
                 const list = document.getElementById('editor-list');
-                list.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+                list.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
             }, 100);
         }
 
         function deleteStep(index) {
             if(confirm("Delete this step?")) {
-                workflow.splice(index, 1);
-                save();
+                state.workflow.splice(index, 1);
+                saveData();
                 renderEditor();
             }
         }
 
-        // --- PDF EXPORT LOGIC ---
         function exportPDF() {
             const printContainer = document.getElementById('print-content');
-            let html = '';
+            let html = `<div class="mb-4 text-sm font-mono text-gray-500">START AT ID: ${state.workflow.find(s=>s.id==='start') ? 'start' : state.workflow[0].id}</div>`;
+            html += `<table class="w-full text-left border-collapse"><thead><tr class="border-b-2 border-black"><th class="py-2">Step Name</th><th class="py-2">Instruction</th><th class="py-2">Logic</th></tr></thead><tbody>`;
 
-            // Linear logic printing
-            html += `<div class="mb-4 text-sm font-mono text-gray-500">START AT ID: ${workflow.find(s=>s.id==='start') ? 'start' : workflow[0].id}</div>`;
-            
-            html += `<table class="w-full text-left border-collapse">`;
-            html += `<thead><tr class="border-b-2 border-black"><th class="py-2">Step Name</th><th class="py-2">Instruction</th><th class="py-2">Logic</th></tr></thead>`;
-            html += `<tbody>`;
-
-            workflow.forEach(step => {
+            state.workflow.forEach(step => {
                 let logic = '';
-                if(step.type === 'task') {
-                    logic = step.next ? `Next &rarr; <b>${step.next}</b>` : `FINISH`;
-                } else if (step.type === 'decision') {
-                    logic = `<div>Yes &rarr; <b>${step.nextIfYes}</b></div><div>No &rarr; <b>${step.nextIfNo}</b></div>`;
-                } else {
-                    logic = 'End of Routine';
-                }
+                if(step.type === 'task') logic = step.next ? `Next &rarr; <b>${step.next}</b>` : `FINISH`;
+                else if (step.type === 'decision') logic = `<div>Yes &rarr; <b>${step.nextIfYes}</b></div><div>No &rarr; <b>${step.nextIfNo}</b></div>`;
+                else logic = 'End of Routine';
 
                 html += `
                     <tr class="border-b border-gray-300">
@@ -409,14 +593,21 @@
                             <div class="text-xs uppercase tracking-wide bg-gray-200 inline-block px-1 rounded mt-1">${step.type}</div>
                         </td>
                         <td class="py-4 align-top font-mono text-sm">${logic}</td>
-                    </tr>
-                `;
+                    </tr>`;
             });
             html += `</tbody></table>`;
-
             printContainer.innerHTML = html;
             window.print();
         }
+
+        // Attach to window for HTML event handlers
+        window.app = {
+            switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, exportPDF,
+            openAuthModal, closeAuthModal, toggleAuthMode, handleAuthSubmit, doLogout, renderAuthUI
+        };
+
+        // Event Listeners
+        document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
 
         // Start
         init();
