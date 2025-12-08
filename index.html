@@ -8,6 +8,9 @@
     <meta name="theme-color" content="#1e293b">
     <meta name="mobile-web-app-capable" content="yes">
     
+    <!-- Dynamic Favicon Placeholder -->
+    <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☀️</text></svg>">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -254,6 +257,7 @@
         
         async function init() {
             lucide.createIcons();
+            updateFavicon(); // Set initial favicon
             renderAuthUI();
             updateConnectionStatus(false);
 
@@ -261,7 +265,6 @@
                 app = initializeApp(firebaseConfig);
                 
                 // CRITICAL FIX: Initialize Auth with persistence immediately.
-                // This prevents the 1-minute timeout caused by switching persistence later.
                 auth = initializeAuth(app, {
                     persistence: browserLocalPersistence
                 });
@@ -270,23 +273,19 @@
 
                 // Listen for Auth Changes
                 onAuthStateChanged(auth, (user) => {
-                    // 1. UPDATE UI IMMEDIATELY
                     state.isLoadingAuth = false;
                     state.user = user;
                     renderAuthUI();
                     
-                    // Reset state on user switch
                     state.workflow = [];
                     state.historyStack = [];
                     state.currentStepId = "start";
 
                     if (user) {
                         console.log("User logged in:", user.uid);
-                        // Show Loading Indicator in content area
                         document.getElementById('step-content').innerHTML = '<div class="py-10"><div class="loader mx-auto mb-4"></div><p class="text-slate-400">Loading your flow...</p></div>';
                         updateConnectionStatus(true);
                         
-                        // 2. FETCH DATA IN BACKGROUND
                         loadDataFromFirestore(user.uid).then(() => {
                             validateCurrentStep();
                             renderRunView();
@@ -309,6 +308,24 @@
                 validateCurrentStep();
                 renderRunView();
                 renderEditor();
+            }
+        }
+
+        // --- FAVICON LOGIC ---
+        function updateFavicon() {
+            const hour = new Date().getHours();
+            let emoji = '☀️'; // Default Day (10am - 4pm)
+            
+            if (hour < 10) {
+                emoji = '🌅'; // Morning (< 10am)
+            } else if (hour >= 16) {
+                emoji = '🌙'; // Evening (>= 4pm)
+            }
+            
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">${emoji}</text></svg>`;
+            const link = document.getElementById('favicon');
+            if(link) {
+                link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
             }
         }
 
@@ -354,7 +371,6 @@
             } catch (error) {
                 console.error("Error loading from Firestore:", error);
                 showToast("Sync Error: Check Connection", true);
-                // On error, default to default workflow to prevent empty screen
                 state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
             }
         }
