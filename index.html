@@ -206,8 +206,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // Import advanced Firestore initialization for offline persistence
-        import { initializeFirestore, doc, getDoc, setDoc, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Reverting to standard getFirestore to prevent IndexDB locks which caused the 1-minute timeout
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
         const firebaseConfig = {
@@ -220,7 +220,6 @@
         };
 
         let app, auth, db;
-        // Use environment App ID if available (for preview), else fallback to generic default
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // --- CONSTANTS ---
@@ -247,7 +246,7 @@
             user: null,
             isAuthModeLogin: true,
             isOnline: false,
-            isLoadingAuth: true // New flag to prevent flash of "Local"
+            isLoadingAuth: true
         };
 
         // --- CORE LOGIC ---
@@ -260,75 +259,66 @@
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                
-                // OPTIMIZATION: Use initializeFirestore with persistentLocalCache
-                // This enables offline-first data loading (instant reloads)
-                db = initializeFirestore(app, {
-                    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-                });
+                // Standard Firestore init prevents lock issues
+                db = getFirestore(app);
+
+                // Set persistence once, no await to prevent blocking
+                setPersistence(auth, browserLocalPersistence).catch(e => console.warn(e));
 
                 // Listen for Auth Changes
-                onAuthStateChanged(auth, async (user) => {
+                onAuthStateChanged(auth, (user) => {
+                    // 1. UPDATE UI IMMEDIATELY
                     state.isLoadingAuth = false;
+                    state.user = user;
+                    renderAuthUI();
                     
-                    // Reset state on user switch to prevent data leaking
+                    // Reset state on user switch
                     state.workflow = [];
                     state.historyStack = [];
                     state.currentStepId = "start";
-                    
-                    state.user = user;
-                    renderAuthUI();
 
                     if (user) {
                         console.log("User logged in:", user.uid);
+                        // Show Loading Indicator in content area
+                        document.getElementById('step-content').innerHTML = '<div class="py-10"><div class="loader mx-auto mb-4"></div><p class="text-slate-400">Loading your flow...</p></div>';
                         updateConnectionStatus(true);
-                        await loadDataFromFirestore(user.uid);
+                        
+                        // 2. FETCH DATA IN BACKGROUND
+                        loadDataFromFirestore(user.uid).then(() => {
+                            validateCurrentStep();
+                            renderRunView();
+                            renderEditor();
+                        });
                     } else {
                         console.log("User logged out (Local Mode)");
                         updateConnectionStatus(false);
                         loadDataFromLocal();
+                        validateCurrentStep();
+                        renderRunView();
+                        renderEditor();
                     }
-
-                    // Sanity check: ensure valid workflow
-                    if (!state.workflow || state.workflow.length === 0) {
-                        state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
-                        if(user) saveData(true); // Save default for new cloud user
-                    }
-                    
-                    validateCurrentStep();
-                    renderRunView();
-                    renderEditor();
                 });
             } catch (error) {
                 console.error("Firebase init failed:", error);
                 state.isLoadingAuth = false;
                 showToast("Offline Mode (Firebase Init Failed)", true);
                 loadDataFromLocal();
-                if (!state.workflow || state.workflow.length === 0) {
-                    state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
-                }
                 validateCurrentStep();
                 renderRunView();
                 renderEditor();
             }
         }
 
-        // Validate that currentStepId actually points to a real step
         function validateCurrentStep() {
             if(state.workflow.length === 0) return;
-            
-            // Allow the completed state to exist
             if(state.currentStepId === COMPLETED_FLOW_ID) return;
-
             const exists = state.workflow.find(s => s.id === state.currentStepId);
             if (!exists) {
-                // If "start" is missing, fallback to first step
                 state.currentStepId = state.workflow[0].id;
                 state.historyStack = [];
             }
         }
 
-        // Data Handling - LOCAL (Specific Key)
         function loadDataFromLocal() {
             const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (saved) {
@@ -340,7 +330,6 @@
             }
         }
 
-        // Data Handling - FIRESTORE (Cloud)
         async function loadDataFromFirestore(uid) {
             try {
                 const docRef = doc(db, "artifacts", appId, "users", uid, "data", "flowhabit");
@@ -351,24 +340,24 @@
                     if(data.workflow && Array.isArray(data.workflow)) {
                         state.workflow = data.workflow;
                         showToast("Synced with Cloud");
+                    } else {
+                         state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
                     }
                 } else {
-                    // New cloud user: Start Fresh with Default (Strict Separation)
+                    // New cloud user -> Save Default
                     state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
                     await saveData(true); 
                 }
             } catch (error) {
                 console.error("Error loading from Firestore:", error);
                 showToast("Sync Error: Check Connection", true);
-                // On error, we could fallback to local cache, but to ensure
-                // separation we won't load the 'unauthenticated' local data.
+                // On error, default to default workflow to prevent empty screen
                 state.workflow = JSON.parse(JSON.stringify(DEFAULT_WORKFLOW));
             }
         }
 
         async function saveData(forceCloud = false) {
             if (state.user) {
-                // Save to Cloud ONLY
                 try {
                     const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "flowhabit");
                     await setDoc(docRef, {
@@ -383,7 +372,6 @@
                     updateConnectionStatus(false);
                 }
             } else {
-                // Save to Local ONLY
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.workflow));
                 if(!forceCloud) showToast("Saved Locally");
             }
@@ -393,7 +381,7 @@
         function showToast(msg, isError = false) {
             const el = document.getElementById("toast");
             el.innerText = msg;
-            el.style.backgroundColor = isError ? "#dc2626" : "#10b981"; // Red vs Green
+            el.style.backgroundColor = isError ? "#dc2626" : "#10b981";
             el.className = "show";
             setTimeout(() => { el.className = el.className.replace("show", ""); }, 3000);
         }
@@ -427,7 +415,6 @@
 
             if (!statusText || !dropdown || !userBtn) return;
 
-            // LOADING STATE
             if (state.isLoadingAuth) {
                 statusText.innerHTML = '<span class="animate-pulse">...</span>';
                 userBtn.classList.remove('text-indigo-400');
@@ -435,7 +422,6 @@
                 return;
             }
 
-            // LOGGED IN
             if (state.user) {
                 const displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
                 statusText.innerText = displayName;
@@ -447,7 +433,6 @@
                     </button>
                 `;
             } else {
-                // LOCAL
                 statusText.innerText = "Local";
                 userBtn.classList.remove('text-indigo-400');
                 dropdown.innerHTML = `
@@ -510,7 +495,7 @@
                 } catch (error) {
                     if (retries > 0 && error.code === 'auth/network-request-failed') {
                         console.warn("Auth network error, retrying...", error);
-                        await new Promise(r => setTimeout(r, 500)); // wait 500ms
+                        await new Promise(r => setTimeout(r, 500)); 
                         await attemptAuth(retries - 1);
                     } else {
                         throw error;
@@ -547,7 +532,6 @@
         async function doLogout() {
             try {
                 await signOut(auth);
-                // State resets via onAuthStateChanged
             } catch (error) {
                 console.error("Logout failed", error);
             }
@@ -597,6 +581,10 @@
             }
 
             if(state.workflow.length === 0) {
+                 // Check if loading
+                 if (state.user && document.getElementById('step-content').innerHTML.includes('loader')) {
+                     return; // Don't overwrite loader
+                 }
                 container.innerHTML = `<div class="text-slate-400">No steps defined. Go to Edit Flow.</div>`;
                 return;
             }
@@ -649,18 +637,14 @@
         }
 
         function nextStep(targetId) {
-            // Check if target is valid
             const targetStep = state.workflow.find(s => s.id === targetId);
             
             if (!targetId || !targetStep) {
-                // If the next step is undefined/empty, we assume the routine is done.
-                // We attempt to find a step with type="end" to show the success screen.
                 const endStep = state.workflow.find(s => s.type === 'end');
                 if (endStep) {
                      state.historyStack.push(state.currentStepId);
                      state.currentStepId = endStep.id;
                 } else {
-                    // Fallback if no end step exists: Show Generic Success Screen
                     state.historyStack.push(state.currentStepId);
                     state.currentStepId = COMPLETED_FLOW_ID;
                 }
@@ -673,7 +657,6 @@
 
         function restartFlow() {
             if(state.workflow.length > 0) {
-                // Determine the "real" start. ID 'start' or first item.
                 const startStep = state.workflow.find(s=>s.id==='start');
                 state.currentStepId = startStep ? 'start' : state.workflow[0].id;
             }
@@ -797,16 +780,13 @@
             window.print();
         }
 
-        // Attach to window for HTML event handlers
         window.app = {
             switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, exportPDF,
             openAuthModal, closeAuthModal, toggleAuthMode, handleAuthSubmit, handleGuestLogin, doLogout, renderAuthUI
         };
 
-        // Event Listeners
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
 
-        // Start
         init();
     </script>
 </body>
