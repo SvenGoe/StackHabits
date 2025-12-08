@@ -104,6 +104,7 @@
             <div class="relative group">
                 <button id="user-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors border border-transparent hover:border-slate-600">
                     <i data-lucide="user" class="w-4 h-4"></i>
+                    <!-- Changed default text to '...' to avoid Local flash -->
                     <span id="user-status-text" class="hidden sm:inline">...</span>
                 </button>
                 <!-- Dropdown -->
@@ -205,8 +206,8 @@
     <!-- MODULE SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // Reverting to standard getFirestore to prevent IndexDB locks which caused the 1-minute timeout
+        // Using initializeAuth allows us to set persistence synchronously at startup
+        import { initializeAuth, browserLocalPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
@@ -258,12 +259,14 @@
 
             try {
                 app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                // Standard Firestore init prevents lock issues
-                db = getFirestore(app);
+                
+                // CRITICAL FIX: Initialize Auth with persistence immediately.
+                // This prevents the 1-minute timeout caused by switching persistence later.
+                auth = initializeAuth(app, {
+                    persistence: browserLocalPersistence
+                });
 
-                // Set persistence once, no await to prevent blocking
-                setPersistence(auth, browserLocalPersistence).catch(e => console.warn(e));
+                db = getFirestore(app);
 
                 // Listen for Auth Changes
                 onAuthStateChanged(auth, (user) => {
