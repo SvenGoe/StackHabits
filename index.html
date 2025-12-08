@@ -84,7 +84,7 @@
             <i data-lucide="layers" class="text-indigo-400"></i>
             <span class="hidden sm:inline">StackHabits</span>
             <!-- Connection Indicator -->
-            <div id="connection-status" class="w-2 h-2 rounded-full bg-red-500 ml-2" title="Disconnected"></div>
+            <div id="connection-status" class="w-2 h-2 rounded-full bg-slate-600 ml-2" title="Connecting..."></div>
         </div>
         
         <!-- Auth Status & Controls -->
@@ -104,7 +104,7 @@
             <div class="relative group">
                 <button id="user-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors border border-transparent hover:border-slate-600">
                     <i data-lucide="user" class="w-4 h-4"></i>
-                    <span id="user-status-text" class="hidden sm:inline">Local</span>
+                    <span id="user-status-text" class="hidden sm:inline">...</span>
                 </button>
                 <!-- Dropdown -->
                 <div class="absolute right-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -206,7 +206,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Import advanced Firestore initialization for offline persistence
+        import { initializeFirestore, doc, getDoc, setDoc, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
         const firebaseConfig = {
@@ -245,7 +246,8 @@
             historyStack: [],
             user: null,
             isAuthModeLogin: true,
-            isOnline: false
+            isOnline: false,
+            isLoadingAuth: true // New flag to prevent flash of "Local"
         };
 
         // --- CORE LOGIC ---
@@ -258,18 +260,17 @@
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                db = getFirestore(app);
-
-                // OPTIMIZATION: Set persistence once at startup!
-                // This ensures it survives reloads and we don't block the UI during login.
-                try {
-                    await setPersistence(auth, browserLocalPersistence);
-                } catch(e) {
-                    console.warn("Persistence setting failed (may be already set or blocked)", e);
-                }
+                
+                // OPTIMIZATION: Use initializeFirestore with persistentLocalCache
+                // This enables offline-first data loading (instant reloads)
+                db = initializeFirestore(app, {
+                    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+                });
 
                 // Listen for Auth Changes
                 onAuthStateChanged(auth, async (user) => {
+                    state.isLoadingAuth = false;
+                    
                     // Reset state on user switch to prevent data leaking
                     state.workflow = [];
                     state.historyStack = [];
@@ -300,6 +301,7 @@
                 });
             } catch (error) {
                 console.error("Firebase init failed:", error);
+                state.isLoadingAuth = false;
                 showToast("Offline Mode (Firebase Init Failed)", true);
                 loadDataFromLocal();
                 if (!state.workflow || state.workflow.length === 0) {
@@ -425,6 +427,15 @@
 
             if (!statusText || !dropdown || !userBtn) return;
 
+            // LOADING STATE
+            if (state.isLoadingAuth) {
+                statusText.innerHTML = '<span class="animate-pulse">...</span>';
+                userBtn.classList.remove('text-indigo-400');
+                dropdown.innerHTML = '<div class="text-xs text-slate-500 p-2">Checking login...</div>';
+                return;
+            }
+
+            // LOGGED IN
             if (state.user) {
                 const displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
                 statusText.innerText = displayName;
@@ -436,6 +447,7 @@
                     </button>
                 `;
             } else {
+                // LOCAL
                 statusText.innerText = "Local";
                 userBtn.classList.remove('text-indigo-400');
                 dropdown.innerHTML = `
@@ -490,9 +502,6 @@
 
             const attemptAuth = async (retries = 1) => {
                 try {
-                    // SPEED FIX: Removed await setPersistence here!
-                    // It is now handled in init() so we don't block the button click.
-                    
                     if (state.isAuthModeLogin) {
                         await signInWithEmailAndPassword(auth, email, password);
                     } else {
