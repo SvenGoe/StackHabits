@@ -206,7 +206,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
         const firebaseConfig = {
@@ -259,6 +259,14 @@
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
+
+                // OPTIMIZATION: Set persistence once at startup!
+                // This ensures it survives reloads and we don't block the UI during login.
+                try {
+                    await setPersistence(auth, browserLocalPersistence);
+                } catch(e) {
+                    console.warn("Persistence setting failed (may be already set or blocked)", e);
+                }
 
                 // Listen for Auth Changes
                 onAuthStateChanged(auth, async (user) => {
@@ -482,9 +490,9 @@
 
             const attemptAuth = async (retries = 1) => {
                 try {
-                    // Force Local Persistence
-                    await setPersistence(auth, browserLocalPersistence);
-
+                    // SPEED FIX: Removed await setPersistence here!
+                    // It is now handled in init() so we don't block the button click.
+                    
                     if (state.isAuthModeLogin) {
                         await signInWithEmailAndPassword(auth, email, password);
                     } else {
@@ -518,7 +526,6 @@
         async function handleGuestLogin() {
              const errorBox = document.getElementById('auth-error');
              try {
-                await setPersistence(auth, browserLocalPersistence);
                 await signInAnonymously(auth);
                 closeAuthModal();
              } catch (error) {
