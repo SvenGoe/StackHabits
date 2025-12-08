@@ -205,7 +205,7 @@
     <!-- MODULE SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
@@ -482,6 +482,9 @@
 
             const attemptAuth = async (retries = 1) => {
                 try {
+                    // Force Local Persistence
+                    await setPersistence(auth, browserLocalPersistence);
+
                     if (state.isAuthModeLogin) {
                         await signInWithEmailAndPassword(auth, email, password);
                     } else {
@@ -515,6 +518,7 @@
         async function handleGuestLogin() {
              const errorBox = document.getElementById('auth-error');
              try {
+                await setPersistence(auth, browserLocalPersistence);
                 await signInAnonymously(auth);
                 closeAuthModal();
              } catch (error) {
