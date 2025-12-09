@@ -9,13 +9,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://img.icons8.com/color/96/git-merge.png",
-      "sizes": "96x96",
+      "src": "icon.png",
+      "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://img.icons8.com/color/192/git-merge.png",
-      "sizes": "192x192",
+      "src": "icon.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
