@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StackHabits</title>
+    <title>StackHabits - Cloud Sync</title>
     <meta name="description" content="A conditional habit tracker with cloud sync">
     <meta name="theme-color" content="#1e293b">
     <meta name="mobile-web-app-capable" content="yes">
@@ -13,7 +13,6 @@
     <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☀️</text></svg>">
     
     <!-- Apple Touch Icon - iOS Home Screen -->
-    <!-- NOTE: You must upload a file named 'icon.png' to your GitHub repo for this to work on iPhone -->
     <link rel="apple-touch-icon" href="icon.png">
 
     <!-- Tailwind CSS -->
@@ -97,22 +96,18 @@
     <!-- Top Navigation Bar -->
     <nav class="no-print h-14 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 shrink-0 z-50">
         <div class="flex items-center gap-2 font-bold text-lg tracking-tight cursor-pointer" onclick="window.app.goHome()">
-            <!-- Icon changed to layers for "Stacking" -->
             <i data-lucide="layers" class="text-indigo-400"></i>
             <span class="hidden sm:inline">StackHabits</span>
-            <!-- Connection Indicator -->
             <div id="connection-status" class="w-2 h-2 rounded-full bg-slate-600 ml-2" title="Connecting..."></div>
         </div>
         
         <!-- Auth Status & Controls -->
         <div class="flex items-center gap-2">
-            <!-- View Switchers -->
             <button onclick="window.app.switchView('run')" id="btn-run" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">Run</button>
             <button onclick="window.app.switchView('edit')" id="btn-edit" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Edit</button>
             
             <div class="h-6 w-px bg-slate-700 mx-1"></div>
 
-            <!-- Action Buttons -->
             <button onclick="window.app.exportPDF()" class="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Export to PDF">
                 <i data-lucide="printer" class="w-4 h-4"></i>
             </button>
@@ -121,7 +116,6 @@
             <div class="relative group">
                 <button id="user-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors border border-transparent hover:border-slate-600">
                     <i data-lucide="user" class="w-4 h-4"></i>
-                    <!-- Changed default text to '...' to avoid Local flash -->
                     <span id="user-status-text" class="hidden sm:inline">...</span>
                 </button>
                 <!-- Dropdown -->
@@ -168,7 +162,6 @@
 
         <!-- EDIT VIEW -->
         <div id="view-edit" class="hidden w-full max-w-4xl fade-in pb-20">
-            
             <!-- Workflow Management Toolbar -->
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6 flex flex-col sm:flex-row gap-4 justify-between items-end sm:items-center shadow-lg">
                 <div class="flex flex-col gap-1 w-full sm:w-auto">
@@ -179,18 +172,10 @@
                 </div>
                 
                 <div class="flex gap-2">
-                    <button onclick="window.app.createWorkflow()" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="New Workflow">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                    </button>
-                    <button onclick="window.app.renameWorkflow()" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Rename">
-                        <i data-lucide="edit-2" class="w-4 h-4"></i>
-                    </button>
-                    <button onclick="window.app.toggleWorkflowActive()" id="btn-toggle-active" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Toggle Active">
-                        <i data-lucide="eye" class="w-4 h-4"></i>
-                    </button>
-                    <button onclick="window.app.deleteWorkflow()" class="p-2 bg-red-900/50 hover:bg-red-900/80 text-red-200 border border-red-900 rounded transition-colors" title="Delete Workflow">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
+                    <button onclick="window.app.createWorkflow()" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="New Workflow"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    <button onclick="window.app.renameWorkflow()" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Rename"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                    <button onclick="window.app.toggleWorkflowActive()" id="btn-toggle-active" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Toggle Active"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                    <button onclick="window.app.deleteWorkflow()" class="p-2 bg-red-900/50 hover:bg-red-900/80 text-red-200 border border-red-900 rounded transition-colors" title="Delete Workflow"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
             </div>
 
@@ -210,13 +195,56 @@
 
     </main>
 
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <button onclick="window.app.closeSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="settings" class="text-indigo-400"></i> Settings</h2>
+            
+            <div class="mb-6">
+                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Household Management</h3>
+                
+                <div id="household-status-loading" class="text-center py-4 text-slate-500 hidden">Checking household status...</div>
+                
+                <!-- Not in Household -->
+                <div id="household-none" class="hidden space-y-4">
+                    <p class="text-sm text-slate-300">You are not currently part of a household. Create one to share workflows or join an existing one.</p>
+                    <button onclick="window.app.createHousehold()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-indigo-500/25 transition-all text-sm">
+                        Create New Household
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <div class="h-px bg-slate-700 flex-1"></div>
+                        <span class="text-xs text-slate-500 uppercase">OR JOIN</span>
+                        <div class="h-px bg-slate-700 flex-1"></div>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="join-household-id" placeholder="Enter Household ID" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-sm focus:border-indigo-500 outline-none uppercase font-mono">
+                        <button onclick="window.app.joinHousehold()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-sm transition-all">Join</button>
+                    </div>
+                </div>
+
+                <!-- In Household -->
+                <div id="household-active" class="hidden space-y-4">
+                    <div class="bg-indigo-900/20 border border-indigo-500/30 p-4 rounded-lg text-center">
+                        <div class="text-xs text-indigo-300 uppercase mb-1">Current Household ID</div>
+                        <div class="text-2xl font-mono font-bold text-white tracking-widest select-all" id="current-household-id">ABCD12</div>
+                        <div class="text-xs text-slate-400 mt-2">Share this ID with others to let them join.</div>
+                    </div>
+                    <p class="text-xs text-slate-400 text-center">Workflows are shared with everyone in this household. Run progress is private to you.</p>
+                    <button onclick="window.app.leaveHousehold()" class="w-full py-2 bg-transparent border border-red-900 text-red-400 hover:bg-red-900/20 rounded-lg font-bold transition-all text-sm">
+                        Leave Household
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- AUTH MODAL -->
     <div id="auth-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button onclick="window.app.closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
-            
             <h2 class="text-xl font-bold mb-6 text-center" id="auth-title">Sign In</h2>
-            
             <form id="auth-form" class="space-y-4">
                 <div>
                     <label class="block text-xs uppercase font-bold text-slate-500 mb-1">Email</label>
@@ -226,24 +254,17 @@
                     <label class="block text-xs uppercase font-bold text-slate-500 mb-1">Password</label>
                     <input type="password" id="auth-password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" placeholder="••••••••" required>
                 </div>
-                
                 <div id="auth-error" class="hidden text-red-400 text-sm bg-red-400/10 p-2 rounded border border-red-500/20"></div>
-
-                <button type="submit" id="auth-submit-btn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-indigo-500/25 transition-all">
-                    Sign In
-                </button>
+                <button type="submit" id="auth-submit-btn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-indigo-500/25 transition-all">Sign In</button>
             </form>
-
             <div class="my-4 flex items-center gap-3">
                 <div class="h-px bg-slate-700 flex-1"></div>
                 <div class="text-xs text-slate-500 uppercase">Or</div>
                 <div class="h-px bg-slate-700 flex-1"></div>
             </div>
-
             <button onclick="window.app.handleGuestLogin()" id="guest-btn" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
                 <i data-lucide="ghost" class="w-4 h-4"></i> Continue as Guest
             </button>
-
             <div class="mt-4 text-center text-sm text-slate-400">
                 <span id="auth-toggle-text">Don't have an account?</span>
                 <button onclick="window.app.toggleAuthMode()" class="text-indigo-400 hover:text-indigo-300 font-bold ml-1" id="auth-toggle-btn">Sign Up</button>
@@ -264,7 +285,6 @@
     <!-- MODULE SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // Using initializeAuth allows us to set persistence synchronously at startup
         import { initializeAuth, browserLocalPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -298,60 +318,58 @@
             { id: "end", type: "end", text: "Routine Complete!", next: null }
         ];
 
-        // New structure: Array of Workflows
         const DEFAULT_WORKFLOWS = [
             { id: 'default', name: 'Morning Routine', active: true, steps: JSON.parse(JSON.stringify(DEFAULT_WORKFLOW_STEPS)) }
         ];
 
         let state = {
-            workflows: [], // Array of workflow objects
-            activeWorkflowId: null, // ID of workflow currently running or being edited
-            currentStepId: "start", // Current step in the runner
+            workflows: [], 
+            activeWorkflowId: null, 
+            currentStepId: "start",
             historyStack: [],
             user: null,
+            householdId: null, // New State for Household
             isAuthModeLogin: true,
             isOnline: false,
             isLoadingAuth: true
         };
 
-        let sortableInstance = null; // Track sortable instance
+        let sortableInstance = null;
 
         // --- CORE LOGIC ---
         
         async function init() {
             lucide.createIcons();
-            updateFavicon(); // Set initial favicon
+            updateFavicon();
             renderAuthUI();
             updateConnectionStatus(false);
 
             try {
                 app = initializeApp(firebaseConfig);
-                
-                // CRITICAL FIX: Initialize Auth with persistence immediately.
-                auth = initializeAuth(app, {
-                    persistence: browserLocalPersistence
-                });
-
+                auth = initializeAuth(app, { persistence: browserLocalPersistence });
                 db = getFirestore(app);
 
-                // Listen for Auth Changes
-                onAuthStateChanged(auth, (user) => {
+                onAuthStateChanged(auth, async (user) => {
                     state.isLoadingAuth = false;
                     state.user = user;
-                    renderAuthUI();
                     
                     state.historyStack = [];
                     state.currentStepId = "start";
                     state.activeWorkflowId = null;
+                    state.householdId = null; // Reset household state
 
                     if (user) {
                         console.log("User logged in:", user.uid);
-                        // Temporarily show loading in step area, but main view might be dashboard
+                        document.getElementById('step-content').innerHTML = '<div class="py-10"><div class="loader mx-auto mb-4"></div><p class="text-slate-400">Loading your flow...</p></div>';
                         updateConnectionStatus(true);
                         
+                        // 1. Fetch User Profile to check for Household
+                        await loadUserProfile(user.uid);
+                        renderAuthUI(); // Update UI with settings option
+
+                        // 2. Load Data based on Household Status
                         loadDataFromFirestore(user.uid).then(() => {
                             validateState();
-                            // FIX: Immediately render dashboard instead of active run view
                             renderDashboard();
                             closeRun();
                             renderEditor();
@@ -359,9 +377,9 @@
                     } else {
                         console.log("User logged out (Local Mode)");
                         updateConnectionStatus(false);
+                        renderAuthUI();
                         loadDataFromLocal();
                         validateState();
-                        // FIX: Immediately render dashboard
                         renderDashboard();
                         closeRun();
                         renderEditor();
@@ -379,95 +397,141 @@
             }
         }
 
-        // --- FAVICON LOGIC ---
-        function updateFavicon() {
-            const hour = new Date().getHours();
-            let emoji = '☀️'; // Default Day (10am - 4pm)
+        // --- HOUSEHOLD LOGIC ---
+
+        async function loadUserProfile(uid) {
+            try {
+                // Path: /artifacts/{appId}/users/{uid}/data/profile
+                const docRef = doc(db, "artifacts", appId, "users", uid, "data", "profile");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    state.householdId = data.householdId || null;
+                }
+            } catch (e) {
+                console.error("Error loading profile", e);
+            }
+        }
+
+        async function createHousehold() {
+            if (!state.user) return;
+            const newHouseholdId = Math.random().toString(36).substring(2, 8).toUpperCase();
             
-            if (hour < 10) {
-                emoji = '🌅'; // Morning (< 10am)
-            } else if (hour >= 16) {
-                emoji = '🌙'; // Evening (>= 4pm)
+            try {
+                // 1. Save current workflows to public household document
+                // Path: /artifacts/{appId}/public/data/households/{id}
+                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", newHouseholdId);
+                await setDoc(householdRef, {
+                    workflows: state.workflows,
+                    createdBy: state.user.uid,
+                    createdAt: new Date().toISOString()
+                });
+
+                // 2. Update user profile to link to this household
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { householdId: newHouseholdId }, { merge: true });
+
+                state.householdId = newHouseholdId;
+                showToast("Household Created!");
+                renderSettingsUI(); // Update modal
+                renderAuthUI();
+                // Data is already loaded in state, just switched pointer
+            } catch (e) {
+                console.error("Create household failed", e);
+                showToast("Error creating household", true);
             }
+        }
+
+        async function joinHousehold() {
+            const input = document.getElementById('join-household-id');
+            const id = input.value.trim().toUpperCase();
+            if (!id || !state.user) return;
+
+            try {
+                // 1. Check if household exists
+                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", id);
+                const snap = await getDoc(householdRef);
+                
+                if (!snap.exists()) {
+                    showToast("Household ID not found", true);
+                    return;
+                }
+
+                // 2. Update user profile
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { householdId: id }, { merge: true });
+
+                state.householdId = id;
+                showToast("Joined Household!");
+                
+                // 3. Reload Data
+                await loadDataFromFirestore(state.user.uid);
+                validateState();
+                renderDashboard();
+                renderEditor();
+                renderSettingsUI();
+            } catch (e) {
+                console.error("Join failed", e);
+                showToast("Error joining household", true);
+            }
+        }
+
+        async function leaveHousehold() {
+            if (!state.user) return;
             
-            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">${emoji}</text></svg>`;
-            const link = document.getElementById('favicon');
-            if(link) {
-                link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+            try {
+                // 1. Remove ID from profile
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { householdId: null }, { merge: true });
+
+                state.householdId = null;
+                showToast("Left Household");
+
+                // 2. Reload Data (Revert to private storage or default)
+                // Note: User keeps current workflows in memory, and next save will go to private storage
+                // This essentially "forks" the household data back to private
+                saveData(); // Save copy to private
+                renderSettingsUI();
+            } catch (e) {
+                console.error("Leave failed", e);
+                showToast("Error leaving household", true);
             }
         }
 
-        // --- DATA MIGRATION & VALIDATION ---
-        function validateState() {
-            // MIGRATION: If legacy data format (single workflow), convert to multi-workflow
-            if (state.workflow && Array.isArray(state.workflow) && !state.workflows) {
-                state.workflows = [
-                    { id: 'migrated', name: 'My Routine', active: true, steps: state.workflow }
-                ];
-                delete state.workflow;
-            }
-
-            // Ensure workflows array exists
-            if (!state.workflows || !Array.isArray(state.workflows) || state.workflows.length === 0) {
-                state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-            }
-
-            // Ensure an active workflow is selected for editor if none is
-            if (!state.activeWorkflowId && state.workflows.length > 0) {
-                // Default to first active workflow, or just first one
-                const first = state.workflows[0];
-                state.activeWorkflowId = first.id;
-            }
-        }
-
-        function getActiveWorkflow() {
-            return state.workflows.find(w => w.id === state.activeWorkflowId) || state.workflows[0];
-        }
-
-        function loadDataFromLocal() {
-            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    // Check if it's the old format (array of steps directly)
-                    if (Array.isArray(parsed)) {
-                         state.workflows = [{ id: 'default', name: 'Default Routine', active: true, steps: parsed }];
-                    } else if(parsed.workflows) {
-                        state.workflows = parsed.workflows;
-                    } else {
-                        state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-                    }
-                } catch(e) { console.error("Local data corrupt", e); }
-            } else {
-                state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-            }
-        }
+        // --- DATA LOGIC ---
 
         async function loadDataFromFirestore(uid) {
             try {
-                const docRef = doc(db, "artifacts", appId, "users", uid, "data", "flowhabit");
+                let docRef;
+                if (state.householdId) {
+                    // Load from SHARED PUBLIC path
+                    docRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
+                } else {
+                    // Load from PRIVATE USER path
+                    docRef = doc(db, "artifacts", appId, "users", uid, "data", "flowhabit");
+                }
+
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     if(data.workflows && Array.isArray(data.workflows)) {
                         state.workflows = data.workflows;
-                        showToast("Synced with Cloud");
+                        showToast(state.householdId ? "Synced with Household" : "Synced with Cloud");
                     } else if (data.workflow) {
-                        // Migration from cloud legacy
                         state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: data.workflow }];
-                        saveData(); // Save new structure immediately
+                        saveData(); 
                     } else {
                          state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
                     }
                 } else {
-                    // New cloud user -> Save Default
                     state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-                    await saveData(true); 
+                    // Only auto-save default if private. Don't auto-create public docs if they are missing (handled by create/join)
+                    if (!state.householdId) await saveData(true); 
                 }
             } catch (error) {
                 console.error("Error loading from Firestore:", error);
-                showToast("Sync Error: Check Connection", true);
+                showToast("Sync Error", true);
                 state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
             }
         }
@@ -480,13 +544,25 @@
 
             if (state.user) {
                 try {
-                    const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "flowhabit");
-                    await setDoc(docRef, dataToSave);
-                    showToast("Saved to Cloud");
+                    let docRef;
+                    if (state.householdId) {
+                        // Save to SHARED PUBLIC path
+                        docRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
+                        // IMPORTANT: Add createdBy/members info if needed, but for now simple write
+                        // We use setDoc with merge: true to avoid overwriting creation metadata if we wanted, 
+                        // but setDoc overwrites whole workflow list which is desired for sync.
+                        await setDoc(docRef, { ...dataToSave }, { merge: true });
+                    } else {
+                        // Save to PRIVATE USER path
+                        docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "flowhabit");
+                        await setDoc(docRef, dataToSave);
+                    }
+                    
+                    showToast("Saved");
                     updateConnectionStatus(true);
                 } catch (e) {
                     console.error("Cloud save failed", e);
-                    showToast("Save Failed: Permission Denied or Offline", true);
+                    showToast("Save Failed", true);
                     updateConnectionStatus(false);
                 }
             } else {
@@ -494,7 +570,53 @@
                 if(!forceCloud) showToast("Saved Locally");
             }
             renderEditor();
-            // We don't forcefully re-render dashboard here to avoid glitching while dragging
+        }
+
+        // --- FAVICON & UTILS ---
+        function updateFavicon() {
+            const hour = new Date().getHours();
+            let emoji = '☀️';
+            if (hour < 10) emoji = '🌅';
+            else if (hour >= 16) emoji = '🌙';
+            
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">${emoji}</text></svg>`;
+            const link = document.getElementById('favicon');
+            if(link) link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+        }
+
+        function validateState() {
+            if (state.workflow && Array.isArray(state.workflow) && !state.workflows) {
+                state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: state.workflow }];
+                delete state.workflow;
+            }
+            if (!state.workflows || !Array.isArray(state.workflows) || state.workflows.length === 0) {
+                state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
+            }
+            if (!state.activeWorkflowId && state.workflows.length > 0) {
+                state.activeWorkflowId = state.workflows[0].id;
+            }
+        }
+
+        function getActiveWorkflow() {
+            return state.workflows.find(w => w.id === state.activeWorkflowId) || state.workflows[0];
+        }
+
+        function loadDataFromLocal() {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                         state.workflows = [{ id: 'default', name: 'Default Routine', active: true, steps: parsed }];
+                    } else if(parsed.workflows) {
+                        state.workflows = parsed.workflows;
+                    } else {
+                        state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
+                    }
+                } catch(e) { console.error("Local data corrupt", e); }
+            } else {
+                state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
+            }
         }
 
         function showToast(msg, isError = false) {
@@ -542,8 +664,15 @@
                 const displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
                 statusText.innerText = displayName;
                 userBtn.classList.add('text-indigo-400');
+                
+                // Add Settings Option
                 dropdown.innerHTML = `
                     <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.isAnonymous ? 'Guest User' : state.user.email}</div>
+                    
+                    <button onclick="window.app.openSettingsModal()" class="w-full text-left px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700 rounded transition-colors mb-1 flex items-center gap-2">
+                        <i data-lucide="settings" class="w-3 h-3"></i> Settings
+                    </button>
+                    
                     <button onclick="window.app.doLogout()" class="w-full text-left px-2 py-1.5 text-sm text-red-400 hover:bg-slate-700 rounded transition-colors">
                         Sign Out
                     </button>
@@ -558,8 +687,35 @@
                     </button>
                 `;
             }
+            lucide.createIcons(); // refresh icons in dropdown
         }
 
+        // --- SETTINGS UI ---
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            renderSettingsUI();
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function renderSettingsUI() {
+            const noneDiv = document.getElementById('household-none');
+            const activeDiv = document.getElementById('household-active');
+            const idDisplay = document.getElementById('current-household-id');
+
+            if (state.householdId) {
+                noneDiv.classList.add('hidden');
+                activeDiv.classList.remove('hidden');
+                idDisplay.innerText = state.householdId;
+            } else {
+                noneDiv.classList.remove('hidden');
+                activeDiv.classList.add('hidden');
+            }
+        }
+
+        // --- AUTH MODAL ---
         function openAuthModal() {
             document.getElementById('auth-modal').classList.remove('hidden');
             document.getElementById('auth-email').focus();
@@ -703,7 +859,6 @@
         }
 
         // --- RUN VIEW LOGIC ---
-        
         function switchView(viewName) {
             document.getElementById('view-run').classList.add('hidden');
             document.getElementById('view-edit').classList.add('hidden');
@@ -720,11 +875,10 @@
 
             if (viewName === 'run') {
                 document.getElementById('view-run').classList.remove('hidden');
-                // If we were running a specific flow, stay there, else show dashboard
                 if (state.activeWorkflowId && document.getElementById('run-active').classList.contains('flex')) {
-                    // Already inside a run, do nothing
+                    // Keep running
                 } else {
-                    closeRun(); // Go to dashboard
+                    closeRun(); 
                 }
             } else {
                 document.getElementById('view-edit').classList.remove('hidden');
@@ -746,7 +900,6 @@
             state.historyStack = [];
             
             const w = getActiveWorkflow();
-            // find real start or first
             const startStep = w.steps.find(s => s.id === 'start');
             state.currentStepId = startStep ? 'start' : w.steps[0].id;
 
@@ -766,7 +919,6 @@
         function renderDashboard() {
             const container = document.getElementById('run-dashboard');
             
-            // Destroy existing sortable instance if any
             if (sortableInstance) sortableInstance.destroy();
             
             container.innerHTML = '';
@@ -779,12 +931,10 @@
             }
 
             activeWorkflows.forEach(w => {
-                const card = document.createElement('div'); // Changed to div for easier styling, internal button can handle click
-                // Add data-id for sortable
+                const card = document.createElement('div');
                 card.setAttribute('data-id', w.id);
                 card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group cursor-pointer select-none";
                 card.onclick = (e) => {
-                    // Prevent click if dragging
                     if(card.classList.contains('sortable-drag')) return;
                     startRun(w.id);
                 };
@@ -802,26 +952,16 @@
             });
             lucide.createIcons();
 
-            // Initialize Sortable
             sortableInstance = new Sortable(container, {
                 animation: 150,
                 ghostClass: 'sortable-ghost',
-                delay: 200, // Slight delay to prevent accidental drags on tap
+                delay: 200, 
                 delayOnTouchOnly: true,
                 onEnd: function (evt) {
-                    // 1. Get new ID order from DOM
                     const newIds = Array.from(container.children).map(el => el.getAttribute('data-id'));
-                    
-                    // 2. Reorder active items based on new ID list
                     const activeSorted = newIds.map(id => state.workflows.find(w => w.id === id));
-                    
-                    // 3. Get inactive items (not in DOM)
                     const inactive = state.workflows.filter(w => !w.active);
-                    
-                    // 4. Merge: Active (sorted) + Inactive
                     state.workflows = [...activeSorted, ...inactive];
-                    
-                    // 5. Save
                     saveData();
                 }
             });
@@ -831,7 +971,6 @@
             const container = document.getElementById('step-content');
             const w = getActiveWorkflow();
             
-            // 1. Check for Completed State
             if (state.currentStepId === COMPLETED_FLOW_ID) {
                 document.getElementById('progress-bar').style.width = '100%';
                 container.innerHTML = `
@@ -851,7 +990,6 @@
                 return;
             }
 
-            // Fallback
             let step = w.steps.find(s => s.id === state.currentStepId);
             if (!step) {
                 step = w.steps[0];
@@ -935,7 +1073,6 @@
             const activeW = getActiveWorkflow();
             const btnActive = document.getElementById('btn-toggle-active');
 
-            // 1. Update Selector
             selector.innerHTML = '';
             state.workflows.forEach(w => {
                 const opt = document.createElement('option');
@@ -945,7 +1082,6 @@
                 selector.appendChild(opt);
             });
 
-            // 2. Update Toggle Button
             if (activeW.active) {
                 btnActive.classList.remove('bg-red-900/50', 'text-red-200');
                 btnActive.classList.add('bg-slate-700', 'text-white');
@@ -958,7 +1094,6 @@
                 btnActive.title = "Activate Workflow";
             }
 
-            // 3. Render Steps
             container.innerHTML = '';
             activeW.steps.forEach((step, index) => {
                 const el = document.createElement('div');
@@ -1081,7 +1216,8 @@
             switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, exportPDF,
             openAuthModal, closeAuthModal, toggleAuthMode, handleAuthSubmit, handleGuestLogin, doLogout, renderAuthUI,
             switchEditWorkflow, createWorkflow, renameWorkflow, deleteWorkflow, toggleWorkflowActive,
-            closeRun, startRun, goHome
+            closeRun, startRun, goHome,
+            openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
@@ -1090,4 +1226,3 @@
     </script>
 </body>
 </html>
-
