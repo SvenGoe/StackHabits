@@ -14,13 +14,16 @@
     
     <!-- Apple Touch Icon - iOS Home Screen -->
     <!-- NOTE: You must upload a file named 'icon.png' to your GitHub repo for this to work on iPhone -->
-    <link rel="apple-touch-icon" href="app-icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- SortableJS for Drag & Drop -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
     <style>
         /* Custom Scrollbar for dark mode */
@@ -81,6 +84,12 @@
             opacity: 1;
             bottom: 50px;
         }
+
+        /* Drag & Drop Styles */
+        .sortable-ghost {
+            opacity: 0.4;
+            background-color: #4f46e5; /* Indigo-600 */
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -132,7 +141,7 @@
         <div id="view-run" class="w-full max-w-4xl flex flex-col items-center h-full fade-in pt-4">
             
             <!-- Dashboard (List of Workflows) -->
-            <div id="run-dashboard" class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div id="run-dashboard" class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pb-20">
                 <!-- Dynamic Tiles -->
             </div>
 
@@ -305,6 +314,8 @@
             isLoadingAuth: true
         };
 
+        let sortableInstance = null; // Track sortable instance
+
         // --- CORE LOGIC ---
         
         async function init() {
@@ -335,7 +346,7 @@
 
                     if (user) {
                         console.log("User logged in:", user.uid);
-                        document.getElementById('step-content').innerHTML = '<div class="py-10"><div class="loader mx-auto mb-4"></div><p class="text-slate-400">Loading your flow...</p></div>';
+                        // Temporarily show loading in step area, but main view might be dashboard
                         updateConnectionStatus(true);
                         
                         loadDataFromFirestore(user.uid).then(() => {
@@ -483,7 +494,7 @@
                 if(!forceCloud) showToast("Saved Locally");
             }
             renderEditor();
-            // Don't re-render run view if we are just saving edits, unless dashboard needs updating
+            // We don't forcefully re-render dashboard here to avoid glitching while dragging
         }
 
         function showToast(msg, isError = false) {
@@ -754,6 +765,10 @@
 
         function renderDashboard() {
             const container = document.getElementById('run-dashboard');
+            
+            // Destroy existing sortable instance if any
+            if (sortableInstance) sortableInstance.destroy();
+            
             container.innerHTML = '';
 
             const activeWorkflows = state.workflows.filter(w => w.active);
@@ -764,22 +779,52 @@
             }
 
             activeWorkflows.forEach(w => {
-                const card = document.createElement('button');
-                card.onclick = () => startRun(w.id);
-                card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all hover:scale-105 shadow-lg group";
+                const card = document.createElement('div'); // Changed to div for easier styling, internal button can handle click
+                // Add data-id for sortable
+                card.setAttribute('data-id', w.id);
+                card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group cursor-pointer select-none";
+                card.onclick = (e) => {
+                    // Prevent click if dragging
+                    if(card.classList.contains('sortable-drag')) return;
+                    startRun(w.id);
+                };
                 card.innerHTML = `
-                    <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-start justify-between mb-4 pointer-events-none">
                         <div class="p-3 bg-indigo-500/10 rounded-lg text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                             <i data-lucide="play" class="w-6 h-6"></i>
                         </div>
                         <span class="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded">${w.steps.length} steps</span>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-1">${w.name}</h3>
-                    <p class="text-sm text-slate-400">Tap to start routine</p>
+                    <h3 class="text-xl font-bold text-white mb-1 pointer-events-none">${w.name}</h3>
+                    <p class="text-sm text-slate-400 pointer-events-none">Tap to start routine</p>
                 `;
                 container.appendChild(card);
             });
             lucide.createIcons();
+
+            // Initialize Sortable
+            sortableInstance = new Sortable(container, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                delay: 200, // Slight delay to prevent accidental drags on tap
+                delayOnTouchOnly: true,
+                onEnd: function (evt) {
+                    // 1. Get new ID order from DOM
+                    const newIds = Array.from(container.children).map(el => el.getAttribute('data-id'));
+                    
+                    // 2. Reorder active items based on new ID list
+                    const activeSorted = newIds.map(id => state.workflows.find(w => w.id === id));
+                    
+                    // 3. Get inactive items (not in DOM)
+                    const inactive = state.workflows.filter(w => !w.active);
+                    
+                    // 4. Merge: Active (sorted) + Inactive
+                    state.workflows = [...activeSorted, ...inactive];
+                    
+                    // 5. Save
+                    saveData();
+                }
+            });
         }
 
         function renderRunView() {
@@ -1045,4 +1090,3 @@
     </script>
 </body>
 </html>
-
