@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StackHabits - Cloud Sync</title>
+    <title>StackHabits</title>
     <meta name="description" content="A conditional habit tracker with cloud sync">
     <meta name="theme-color" content="#1e293b">
     <meta name="mobile-web-app-capable" content="yes">
@@ -197,19 +197,46 @@
 
     <!-- SETTINGS MODAL -->
     <div id="settings-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button onclick="window.app.closeSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             
             <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="settings" class="text-indigo-400"></i> Settings</h2>
             
+            <!-- TRACKING SECTION -->
+            <div class="mb-8">
+                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Tracking</h3>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
+                        <input type="radio" name="tracking_mode" value="disabled" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
+                        <div>
+                            <div class="font-semibold text-sm">Disabled</div>
+                            <div class="text-xs text-slate-500">No habit tracking</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
+                        <input type="radio" name="tracking_mode" value="online" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
+                        <div>
+                            <div class="font-semibold text-sm">Online</div>
+                            <div class="text-xs text-slate-500">Sync history to cloud</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
+                        <input type="radio" name="tracking_mode" value="offline" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
+                        <div>
+                            <div class="font-semibold text-sm">Offline</div>
+                            <div class="text-xs text-slate-500">Device-only history</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- HOUSEHOLD SECTION -->
             <div class="mb-6">
                 <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Household Management</h3>
                 
-                <div id="household-status-loading" class="text-center py-4 text-slate-500 hidden">Checking household status...</div>
-                
                 <!-- Not in Household -->
                 <div id="household-none" class="hidden space-y-4">
-                    <p class="text-sm text-slate-300">You are not currently part of a household. Create one to share workflows or join an existing one.</p>
+                    <p class="text-sm text-slate-300">Create or join a household to share workflows and assign tasks.</p>
                     <button onclick="window.app.createHousehold()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-indigo-500/25 transition-all text-sm">
                         Create New Household
                     </button>
@@ -225,13 +252,20 @@
                 </div>
 
                 <!-- In Household -->
-                <div id="household-active" class="hidden space-y-4">
+                <div id="household-active" class="hidden space-y-6">
                     <div class="bg-indigo-900/20 border border-indigo-500/30 p-4 rounded-lg text-center">
-                        <div class="text-xs text-indigo-300 uppercase mb-1">Current Household ID</div>
+                        <div class="text-xs text-indigo-300 uppercase mb-1">Household ID</div>
                         <div class="text-2xl font-mono font-bold text-white tracking-widest select-all" id="current-household-id">ABCD12</div>
-                        <div class="text-xs text-slate-400 mt-2">Share this ID with others to let them join.</div>
                     </div>
-                    <p class="text-xs text-slate-400 text-center">Workflows are shared with everyone in this household. Run progress is private to you.</p>
+
+                    <!-- Members List -->
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-bold mb-2">Members</div>
+                        <div id="household-members-list" class="space-y-2">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+
                     <button onclick="window.app.leaveHousehold()" class="w-full py-2 bg-transparent border border-red-900 text-red-400 hover:bg-red-900/20 rounded-lg font-bold transition-all text-sm">
                         Leave Household
                     </button>
@@ -307,15 +341,15 @@
 
         // --- STATE ---
         const DEFAULT_WORKFLOW_STEPS = [
-            { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee" },
-            { id: "gym-prep", type: "task", text: "Pack gym clothes & water", next: "protein" },
-            { id: "protein", type: "task", text: "Drink pre-workout / Eat Banana", next: "go-gym" },
-            { id: "go-gym", type: "task", text: "Go to Gym", next: "shower" },
-            { id: "coffee", type: "task", text: "Brew Coffee", next: "read" },
-            { id: "read", type: "task", text: "Read 10 pages", next: "shower" },
-            { id: "shower", type: "task", text: "Take a cold shower", next: "work" },
-            { id: "work", type: "task", text: "Check Calendar", next: "end" },
-            { id: "end", type: "end", text: "Routine Complete!", next: null }
+            { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee", assignees: [] },
+            { id: "gym-prep", type: "task", text: "Pack gym clothes & water", next: "protein", assignees: [] },
+            { id: "protein", type: "task", text: "Drink pre-workout / Eat Banana", next: "go-gym", assignees: [] },
+            { id: "go-gym", type: "task", text: "Go to Gym", next: "shower", assignees: [] },
+            { id: "coffee", type: "task", text: "Brew Coffee", next: "read", assignees: [] },
+            { id: "read", type: "task", text: "Read 10 pages", next: "shower", assignees: [] },
+            { id: "shower", type: "task", text: "Take a cold shower", next: "work", assignees: [] },
+            { id: "work", type: "task", text: "Check Calendar", next: "end", assignees: [] },
+            { id: "end", type: "end", text: "Routine Complete!", next: null, assignees: [] }
         ];
 
         const DEFAULT_WORKFLOWS = [
@@ -328,7 +362,9 @@
             currentStepId: "start",
             historyStack: [],
             user: null,
-            householdId: null, // New State for Household
+            householdId: null,
+            householdMembers: {}, // Map { uid: { email, name } }
+            trackingMode: 'disabled',
             isAuthModeLogin: true,
             isOnline: false,
             isLoadingAuth: true
@@ -356,18 +392,17 @@
                     state.historyStack = [];
                     state.currentStepId = "start";
                     state.activeWorkflowId = null;
-                    state.householdId = null; // Reset household state
+                    state.householdId = null;
+                    state.householdMembers = {};
 
                     if (user) {
                         console.log("User logged in:", user.uid);
                         document.getElementById('step-content').innerHTML = '<div class="py-10"><div class="loader mx-auto mb-4"></div><p class="text-slate-400">Loading your flow...</p></div>';
                         updateConnectionStatus(true);
                         
-                        // 1. Fetch User Profile to check for Household
                         await loadUserProfile(user.uid);
-                        renderAuthUI(); // Update UI with settings option
+                        renderAuthUI(); 
 
-                        // 2. Load Data based on Household Status
                         loadDataFromFirestore(user.uid).then(() => {
                             validateState();
                             renderDashboard();
@@ -401,12 +436,12 @@
 
         async function loadUserProfile(uid) {
             try {
-                // Path: /artifacts/{appId}/users/{uid}/data/profile
                 const docRef = doc(db, "artifacts", appId, "users", uid, "data", "profile");
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     state.householdId = data.householdId || null;
+                    state.trackingMode = data.trackingMode || 'disabled';
                 }
             } catch (e) {
                 console.error("Error loading profile", e);
@@ -418,24 +453,28 @@
             const newHouseholdId = Math.random().toString(36).substring(2, 8).toUpperCase();
             
             try {
-                // 1. Save current workflows to public household document
-                // Path: /artifacts/{appId}/public/data/households/{id}
+                const members = {};
+                members[state.user.uid] = { 
+                    email: state.user.email || 'Anonymous', 
+                    name: (state.user.email || 'Admin').split('@')[0] 
+                };
+
                 const householdRef = doc(db, "artifacts", appId, "public", "data", "households", newHouseholdId);
                 await setDoc(householdRef, {
                     workflows: state.workflows,
+                    members: members,
                     createdBy: state.user.uid,
                     createdAt: new Date().toISOString()
                 });
 
-                // 2. Update user profile to link to this household
                 const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
                 await setDoc(userRef, { householdId: newHouseholdId }, { merge: true });
 
                 state.householdId = newHouseholdId;
+                state.householdMembers = members;
                 showToast("Household Created!");
-                renderSettingsUI(); // Update modal
+                renderSettingsUI();
                 renderAuthUI();
-                // Data is already loaded in state, just switched pointer
             } catch (e) {
                 console.error("Create household failed", e);
                 showToast("Error creating household", true);
@@ -448,7 +487,6 @@
             if (!id || !state.user) return;
 
             try {
-                // 1. Check if household exists
                 const householdRef = doc(db, "artifacts", appId, "public", "data", "households", id);
                 const snap = await getDoc(householdRef);
                 
@@ -457,14 +495,22 @@
                     return;
                 }
 
-                // 2. Update user profile
+                // Add self to members
+                const data = snap.data();
+                const members = data.members || {};
+                members[state.user.uid] = { 
+                    email: state.user.email || 'Anonymous', 
+                    name: (state.user.email || 'User').split('@')[0] 
+                };
+
+                await setDoc(householdRef, { members: members }, { merge: true });
+
                 const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
                 await setDoc(userRef, { householdId: id }, { merge: true });
 
                 state.householdId = id;
                 showToast("Joined Household!");
                 
-                // 3. Reload Data
                 await loadDataFromFirestore(state.user.uid);
                 validateState();
                 renderDashboard();
@@ -477,24 +523,45 @@
         }
 
         async function leaveHousehold() {
-            if (!state.user) return;
+            if (!state.user || !state.householdId) return;
             
             try {
-                // 1. Remove ID from profile
+                // Remove self from members (optional, good practice)
+                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
+                const snap = await getDoc(householdRef);
+                if(snap.exists()) {
+                    const members = snap.data().members || {};
+                    delete members[state.user.uid];
+                    await setDoc(householdRef, { members }, { merge: true });
+                }
+
+                // Remove ID from profile
                 const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
                 await setDoc(userRef, { householdId: null }, { merge: true });
 
                 state.householdId = null;
+                state.householdMembers = {};
                 showToast("Left Household");
 
-                // 2. Reload Data (Revert to private storage or default)
-                // Note: User keeps current workflows in memory, and next save will go to private storage
-                // This essentially "forks" the household data back to private
                 saveData(); // Save copy to private
                 renderSettingsUI();
             } catch (e) {
                 console.error("Leave failed", e);
                 showToast("Error leaving household", true);
+            }
+        }
+
+        async function updateMemberName(uid, newName) {
+            if(!state.householdId) return;
+            try {
+                state.householdMembers[uid].name = newName;
+                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
+                await setDoc(householdRef, { members: state.householdMembers }, { merge: true });
+                renderSettingsUI(); // re-render list
+                renderEditor(); // update assignments in UI
+            } catch(e) {
+                console.error(e);
+                showToast("Failed to update name", true);
             }
         }
 
@@ -504,10 +571,8 @@
             try {
                 let docRef;
                 if (state.householdId) {
-                    // Load from SHARED PUBLIC path
                     docRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
                 } else {
-                    // Load from PRIVATE USER path
                     docRef = doc(db, "artifacts", appId, "users", uid, "data", "flowhabit");
                 }
 
@@ -515,6 +580,10 @@
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    if(state.householdId && data.members) {
+                        state.householdMembers = data.members;
+                    }
+
                     if(data.workflows && Array.isArray(data.workflows)) {
                         state.workflows = data.workflows;
                         showToast(state.householdId ? "Synced with Household" : "Synced with Cloud");
@@ -526,7 +595,6 @@
                     }
                 } else {
                     state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-                    // Only auto-save default if private. Don't auto-create public docs if they are missing (handled by create/join)
                     if (!state.householdId) await saveData(true); 
                 }
             } catch (error) {
@@ -546,14 +614,9 @@
                 try {
                     let docRef;
                     if (state.householdId) {
-                        // Save to SHARED PUBLIC path
                         docRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
-                        // IMPORTANT: Add createdBy/members info if needed, but for now simple write
-                        // We use setDoc with merge: true to avoid overwriting creation metadata if we wanted, 
-                        // but setDoc overwrites whole workflow list which is desired for sync.
                         await setDoc(docRef, { ...dataToSave }, { merge: true });
                     } else {
-                        // Save to PRIVATE USER path
                         docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "flowhabit");
                         await setDoc(docRef, dataToSave);
                     }
@@ -570,6 +633,15 @@
                 if(!forceCloud) showToast("Saved Locally");
             }
             renderEditor();
+        }
+
+        async function updateTrackingSettings(mode) {
+            state.trackingMode = mode;
+            if(state.user) {
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { trackingMode: mode }, { merge: true });
+            }
+            showToast(`Tracking: ${mode}`);
         }
 
         // --- FAVICON & UTILS ---
@@ -645,7 +717,7 @@
             }
         }
 
-        // --- AUTH UI LOGIC ---
+        // --- UI RENDERING ---
         function renderAuthUI() {
             const statusText = document.getElementById('user-status-text');
             const dropdown = document.getElementById('auth-dropdown-content');
@@ -656,7 +728,6 @@
             if (state.isLoadingAuth) {
                 statusText.innerHTML = '<span class="animate-pulse">...</span>';
                 userBtn.classList.remove('text-indigo-400');
-                dropdown.innerHTML = '<div class="text-xs text-slate-500 p-2">Checking login...</div>';
                 return;
             }
 
@@ -665,7 +736,6 @@
                 statusText.innerText = displayName;
                 userBtn.classList.add('text-indigo-400');
                 
-                // Add Settings Option
                 dropdown.innerHTML = `
                     <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.isAnonymous ? 'Guest User' : state.user.email}</div>
                     
@@ -687,10 +757,9 @@
                     </button>
                 `;
             }
-            lucide.createIcons(); // refresh icons in dropdown
+            lucide.createIcons();
         }
 
-        // --- SETTINGS UI ---
         function openSettingsModal() {
             document.getElementById('settings-modal').classList.remove('hidden');
             renderSettingsUI();
@@ -701,17 +770,52 @@
         }
 
         function renderSettingsUI() {
+            // Tracking
+            const radios = document.getElementsByName('tracking_mode');
+            radios.forEach(r => {
+                r.checked = (r.value === state.trackingMode);
+            });
+
+            // Household
             const noneDiv = document.getElementById('household-none');
             const activeDiv = document.getElementById('household-active');
             const idDisplay = document.getElementById('current-household-id');
+            const listDiv = document.getElementById('household-members-list');
 
             if (state.householdId) {
                 noneDiv.classList.add('hidden');
                 activeDiv.classList.remove('hidden');
                 idDisplay.innerText = state.householdId;
+
+                // Render Members
+                listDiv.innerHTML = '';
+                Object.keys(state.householdMembers).forEach(uid => {
+                    const member = state.householdMembers[uid];
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-700";
+                    row.innerHTML = `
+                        <div class="truncate">
+                            <div class="font-bold text-sm text-white">${member.name}</div>
+                            <div class="text-xs text-slate-500 truncate w-32">${member.email}</div>
+                        </div>
+                        <button onclick="window.app.promptRenameMember('${uid}', '${member.name}')" class="p-1 text-slate-400 hover:text-white" title="Edit Name">
+                            <i data-lucide="edit-2" class="w-3 h-3"></i>
+                        </button>
+                    `;
+                    listDiv.appendChild(row);
+                });
+                lucide.createIcons();
+
             } else {
                 noneDiv.classList.remove('hidden');
                 activeDiv.classList.add('hidden');
+            }
+        }
+
+        function promptRenameMember(uid, currentName) {
+            const newName = prompt("Enter display name:", currentName);
+            if(newName && newName.trim() !== "") {
+                updateMemberName(uid, newName.trim());
             }
         }
 
@@ -1006,10 +1110,18 @@
             if(step.type === 'end') icon = 'check-circle';
             if(step.type === 'task') icon = 'check-square';
 
+            // ASSIGNEE DISPLAY
+            let assigneeHtml = '';
+            if (state.householdId && step.assignees && step.assignees.length > 0) {
+                const names = step.assignees.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'Unknown').join(', ');
+                assigneeHtml = `<div class="text-xs font-bold text-indigo-300 uppercase mb-2 tracking-wider">Assigned to: ${names}</div>`;
+            }
+
             let html = `
                 <div class="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-700/50 text-indigo-400 mb-4 animate-bounce-slow">
                     <i data-lucide="${icon}" class="w-8 h-8"></i>
                 </div>
+                ${assigneeHtml}
                 <h2 class="text-3xl font-bold mb-8 leading-tight">${step.text}</h2>
             `;
 
@@ -1107,6 +1219,27 @@
                     return opts;
                 };
 
+                // ASSIGNMENT SELECTOR (Multi-Select Fake UI)
+                let assigneeHtml = '';
+                if(state.householdId) {
+                    const members = Object.keys(state.householdMembers);
+                    let options = `<option value="" ${(!step.assignees || step.assignees.length === 0) ? 'selected' : ''}>Household (Default)</option>`;
+                    members.forEach(uid => {
+                        const name = state.householdMembers[uid].name;
+                        const isSelected = step.assignees && step.assignees.includes(uid);
+                        options += `<option value="${uid}" ${isSelected ? 'selected' : ''}>${name}</option>`;
+                    });
+
+                    assigneeHtml = `
+                        <div class="mt-2 pt-2 border-t border-slate-700">
+                            <label class="text-xs text-indigo-400 uppercase font-bold mb-1 block">Assign To</label>
+                            <select onchange="window.app.updateAssignee(${index}, this)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none w-full text-white">
+                                ${options}
+                            </select>
+                        </div>
+                    `;
+                }
+
                 let logicHtml = '';
                 if(step.type === 'task') {
                     logicHtml = `
@@ -1147,7 +1280,7 @@
                             </select>
                         </div>
                     </div>
-                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">${logicHtml}</div>` : ''}
+                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}${assigneeHtml}</div>` : ''}
                     <button onclick="window.app.deleteStep(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
                 `;
                 container.appendChild(el);
@@ -1162,10 +1295,19 @@
             if(field === 'type') renderEditor();
         }
 
+        function updateAssignee(index, select) {
+            const w = getActiveWorkflow();
+            // Simple single select for now as per requirement for "specific users... or multiple"
+            // To support true multiple, we'd need a multi-select UI. For now, picking one overrides.
+            // If value is empty, it means 'Household' (empty array)
+            w.steps[index].assignees = select.value ? [select.value] : [];
+            saveData();
+        }
+
         function addStep() {
             const w = getActiveWorkflow();
             const newId = "step-" + Math.floor(Math.random() * 10000);
-            w.steps.push({ id: newId, type: "task", text: "New Step", next: "" });
+            w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [] });
             saveData();
             renderEditor();
             setTimeout(() => {
@@ -1217,7 +1359,8 @@
             openAuthModal, closeAuthModal, toggleAuthMode, handleAuthSubmit, handleGuestLogin, doLogout, renderAuthUI,
             switchEditWorkflow, createWorkflow, renameWorkflow, deleteWorkflow, toggleWorkflowActive,
             closeRun, startRun, goHome,
-            openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold
+            openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold,
+            updateTrackingSettings, promptRenameMember, updateAssignee
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
