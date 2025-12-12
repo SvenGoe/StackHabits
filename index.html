@@ -24,6 +24,11 @@
     <!-- SortableJS for Drag & Drop -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
+    <!-- Google Fonts for Print Layout -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    </style>
+
     <style>
         /* Custom Scrollbar for dark mode */
         ::-webkit-scrollbar { width: 8px; }
@@ -35,8 +40,18 @@
         @media print {
             .no-print { display: none !important; }
             .print-only { display: block !important; }
-            body { background: white; color: black; }
+            body { background: white; color: #0f172a; font-family: 'Inter', sans-serif; }
             #app-container { box-shadow: none; border: none; }
+            #print-view { padding: 0 !important; }
+            .page { 
+                box-shadow: none !important; 
+                margin: 0 !important; 
+                width: 100% !important;
+                min-height: auto !important;
+                padding: 0 !important;
+            }
+            /* Ensure background colors print */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
         .print-only { display: none; }
         
@@ -89,6 +104,151 @@
             opacity: 0.4;
             background-color: #4f46e5; /* Indigo-600 */
         }
+
+        /* --- TRACKING SHEET STYLES (From Mockup) --- */
+        .page {
+            background: white;
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 10mm; /* Slightly reduced padding to fit more */
+            position: relative;
+            color: #0f172a;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tracker-section {
+            margin-bottom: 2rem;
+            border: 2px solid #0f172a;
+            page-break-inside: avoid;
+        }
+
+        .section-header {
+            background: #0f172a;
+            color: white;
+            padding: 8px 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 1.1rem;
+        }
+
+        .row {
+            display: flex;
+            border-bottom: 1px solid #cbd5e1;
+        }
+        .row:last-child {
+            border-bottom: none;
+        }
+
+        .cell-habit {
+            width: 30%;
+            padding: 10px;
+            border-right: 2px solid #0f172a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .cell-checks {
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px; /* Tighter gap */
+            align-items: center;
+        }
+
+        .circle {
+            width: 20px; /* Slightly smaller */
+            height: 20px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #94a3b8;
+        }
+
+        .assignee {
+            display: inline-block;
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-top: 4px;
+            align-self: flex-start;
+        }
+        .assignee.household {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Fork Layout */
+        .fork-container {
+            display: flex;
+            border-bottom: 1px solid #cbd5e1;
+        }
+        .fork-column {
+            flex: 1;
+            border-right: 1px solid #cbd5e1;
+        }
+        .fork-column:last-child {
+            border-right: none;
+        }
+        .fork-header {
+            background: #f8fafc;
+            padding: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-bottom: 1px solid #e2e8f0;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .fork-decision-title {
+            background: #f1f5f9;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        /* Reflection Section */
+        .reflection-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 2rem;
+            border-top: 4px solid #0f172a;
+            padding-top: 1rem;
+            page-break-inside: avoid;
+        }
+        .reflection-box {
+            flex: 1;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            height: 150px;
+            padding: 12px;
+        }
+        .reflection-title {
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #0f172a;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -108,7 +268,7 @@
             
             <div class="h-6 w-px bg-slate-700 mx-1"></div>
 
-            <button onclick="window.app.exportPDF()" class="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Export to PDF">
+            <button onclick="window.app.exportPDF()" class="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Print Tracking Sheet">
                 <i data-lucide="printer" class="w-4 h-4"></i>
             </button>
             
@@ -324,11 +484,9 @@
     <!-- TOAST NOTIFICATION -->
     <div id="toast">Saved to Cloud</div>
 
-    <!-- PRINT VIEW -->
-    <div id="print-view" class="print-only p-8 bg-white text-black min-h-screen">
-        <h1 class="text-3xl font-bold border-b-2 border-black pb-4 mb-6">My Routine Logic</h1>
-        <div id="print-content" class="space-y-6"></div>
-        <div class="mt-12 text-xs text-gray-500 border-t pt-4">Generated by StackHabits</div>
+    <!-- PRINT VIEW (Replaced dynamic content with container) -->
+    <div id="print-view" class="print-only min-h-screen bg-white">
+        <!-- Content injected by exportPDF -->
     </div>
 
     <!-- MODULE SCRIPT -->
@@ -357,8 +515,8 @@
         // --- STATE ---
         const DEFAULT_WORKFLOW_STEPS = [
             { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "gym-prep", type: "task", text: "Pack gym clothes & water", next: "protein", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "protein", type: "task", text: "Drink pre-workout / Eat Banana", next: "go-gym", assignees: [], targetCount: 1, targetPeriod: "day" },
+            { id: "gym-prep", type: "task", text: "Pack gym clothes", next: "protein", assignees: [], targetCount: 1, targetPeriod: "day" },
+            { id: "protein", type: "task", text: "Drink pre-workout", next: "go-gym", assignees: [], targetCount: 1, targetPeriod: "day" },
             { id: "go-gym", type: "task", text: "Go to Gym", next: "shower", assignees: [], targetCount: 1, targetPeriod: "day" },
             { id: "coffee", type: "task", text: "Brew Coffee", next: "read", assignees: [], targetCount: 1, targetPeriod: "day" },
             { id: "read", type: "task", text: "Read 10 pages", next: "shower", assignees: [], targetCount: 1, targetPeriod: "day" },
@@ -759,16 +917,6 @@
             if(el) {
                 el.className = `w-2 h-2 rounded-full ml-2 ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`;
                 el.title = isOnline ? "Connected to Cloud" : "Offline / Error";
-            }
-        }
-
-        function resetData() {
-            if(confirm("Reset to default workflow?")) {
-                state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-                state.activeWorkflowId = null;
-                state.commitments = [];
-                saveData();
-                switchView('run');
             }
         }
 
@@ -1420,9 +1568,6 @@
 
         function updateAssignee(index, select) {
             const w = getActiveWorkflow();
-            // Simple single select for now as per requirement for "specific users... or multiple"
-            // To support true multiple, we'd need a multi-select UI. For now, picking one overrides.
-            // If value is empty, it means 'Household' (empty array)
             w.steps[index].assignees = select.value ? [select.value] : [];
             saveData();
         }
@@ -1448,33 +1593,162 @@
             }
         }
 
+        // --- PRINT GENERATION ---
         function exportPDF() {
-            const printContainer = document.getElementById('print-content');
-            const w = getActiveWorkflow();
+            const printContainer = document.getElementById('print-view');
+            const now = new Date();
+            const monthName = now.toLocaleString('default', { month: 'long' });
+            const year = now.getFullYear();
+            const daysInMonth = new Date(year, now.getMonth() + 1, 0).getDate();
+            const householdName = state.householdId ? 'My Household' : 'Personal';
             
-            let html = `<h2 class="text-2xl font-bold mb-4">${w.name}</h2>`;
-            html += `<div class="mb-4 text-sm font-mono text-gray-500">START AT ID: ${w.steps.find(s=>s.id==='start') ? 'start' : w.steps[0].id}</div>`;
-            html += `<table class="w-full text-left border-collapse"><thead><tr class="border-b-2 border-black"><th class="py-2">Step Name</th><th class="py-2">Instruction</th><th class="py-2">Logic</th></tr></thead><tbody>`;
+            // Helper to generate circles
+            const getCircles = () => {
+                let html = '';
+                for(let i=1; i<=daysInMonth; i++) {
+                    html += `<div class="circle">${i}</div>`;
+                }
+                return html;
+            };
 
-            w.steps.forEach(step => {
-                let logic = '';
-                if(step.type === 'task') logic = step.next ? `Next &rarr; <b>${step.next}</b>` : `FINISH`;
-                else if (step.type === 'decision') logic = `<div>Yes &rarr; <b>${step.nextIfYes}</b></div><div>No &rarr; <b>${step.nextIfNo}</b></div>`;
-                else logic = 'End of Routine';
+            const getEmptyCircles = () => {
+                let html = '';
+                for(let i=1; i<=daysInMonth; i++) {
+                    html += `<div class="circle"></div>`;
+                }
+                return html;
+            }
 
+            // Helper for Assignee
+            const getAssigneeBadge = (assignees) => {
+                if(!assignees || assignees.length === 0) return `<div class="assignee household">Household</div>`;
+                const names = assignees.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'User').join(', ');
+                return `<div class="assignee">${names}</div>`;
+            };
+
+            const getTargetText = (targetCount, targetPeriod) => {
+                if(!targetCount) return '';
+                if(targetPeriod === 'day' && targetCount === 1) return ''; // Default
+                return `<div class="text-[10px] text-slate-400 mt-1">Target: ${targetCount} / ${targetPeriod}</div>`;
+            }
+
+            // HTML Header
+            let html = `
+                <div class="page">
+                    <div class="flex justify-between items-end mb-8 border-b-4 border-black pb-4">
+                        <div>
+                            <h1 class="text-4xl font-black uppercase tracking-tight">Routine Tracker</h1>
+                            <p class="text-slate-500 font-medium mt-1">${monthName} ${year}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-bold text-slate-400 uppercase">Household</div>
+                            <div class="text-lg font-bold">${state.householdId || "Private"}</div>
+                        </div>
+                    </div>
+            `;
+
+            // Active Workflows
+            const activeWorkflows = state.workflows.filter(w => w.active);
+            
+            activeWorkflows.forEach(w => {
                 html += `
-                    <tr class="border-b border-gray-300">
-                        <td class="py-4 align-top font-mono text-xs text-gray-500 pt-5 pr-2 w-24">${step.id}</td>
-                        <td class="py-4 align-top pr-4">
-                            <div class="font-bold text-lg">${step.text}</div>
-                            <div class="text-xs uppercase tracking-wide bg-gray-200 inline-block px-1 rounded mt-1">${step.type}</div>
-                        </td>
-                        <td class="py-4 align-top font-mono text-sm">${logic}</td>
-                    </tr>`;
+                    <div class="tracker-section">
+                        <div class="section-header flex justify-between">
+                            <span>${w.name}</span>
+                            <span class="opacity-70 text-sm font-normal normal-case">Workflow</span>
+                        </div>
+                `;
+
+                // Simplified traversal for print: Order by definition in steps array because graph traversal for layout is complex
+                // BUT we try to group simple linear steps. 
+                // Decision logic: If a step is a decision, we render it as a full-width header block
+                
+                w.steps.forEach(step => {
+                    if (step.type === 'end') return;
+
+                    if (step.type === 'decision') {
+                        // Render decision header
+                        html += `
+                            <div class="bg-slate-50 border-b border-slate-300 py-2 text-center font-bold text-sm text-slate-600 uppercase tracking-wide">
+                                <i data-lucide="git-branch" class="w-3 h-3 inline mr-1"></i> Decision: ${step.text}
+                            </div>
+                        `;
+                    } else {
+                        // Regular Task
+                        html += `
+                            <div class="row">
+                                <div class="cell-habit">
+                                    <div class="font-bold leading-tight">${step.text}</div>
+                                    ${getAssigneeBadge(step.assignees)}
+                                    ${getTargetText(step.targetCount, step.targetPeriod)}
+                                </div>
+                                <div class="cell-checks">
+                                    ${getCircles()}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                html += `</div>`; // End tracker-section
             });
-            html += `</tbody></table>`;
+
+            // Commitments Section
+            if (state.commitments && state.commitments.length > 0) {
+                html += `
+                    <div class="tracker-section">
+                        <div class="section-header bg-indigo-900 flex justify-between">
+                            <span>Commitments</span>
+                            <span class="opacity-70 text-sm font-normal normal-case">Standalone</span>
+                        </div>
+                `;
+                
+                state.commitments.forEach(comm => {
+                    html += `
+                        <div class="row">
+                            <div class="cell-habit">
+                                <div class="font-bold">${comm.text}</div>
+                                ${getAssigneeBadge(comm.assignees)}
+                                ${getTargetText(comm.targetCount, comm.targetPeriod)}
+                            </div>
+                            <div class="cell-checks">
+                                ${getCircles()}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // Monthly Reflection Section (New)
+            html += `
+                <div class="reflection-container">
+                    <div class="reflection-box">
+                        <div class="reflection-title"><i data-lucide="trophy" class="w-4 h-4"></i> Monthly Wins</div>
+                        <!-- Empty area for writing -->
+                    </div>
+                    <div class="reflection-box">
+                        <div class="reflection-title"><i data-lucide="target" class="w-4 h-4"></i> Focus for Next Month</div>
+                        <!-- Empty area for writing -->
+                    </div>
+                </div>
+            `;
+
+            // Footer
+            html += `
+                <div class="mt-8 pt-4 border-t-2 border-slate-200 flex justify-between text-xs text-slate-400">
+                    <div>Generated by StackHabits</div>
+                    <div>
+                        Legend: 
+                        <span class="inline-block w-3 h-3 border border-slate-400 rounded-full mr-1 ml-2"></span> Done
+                        <span class="inline-block ml-2 font-bold text-slate-500">/</span> Skipped
+                    </div>
+                </div>
+                </div> <!-- End Page -->
+            `;
+
             printContainer.innerHTML = html;
-            window.print();
+            lucide.createIcons();
+            setTimeout(() => window.print(), 500); // Small delay to let fonts/icons render
         }
 
         window.app = {
