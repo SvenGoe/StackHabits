@@ -9,10 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- Dynamic Browser Tab Icon (Favicon) - Works in Browser Tabs -->
+    <!-- Dynamic Browser Tab Icon (Favicon) -->
     <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☀️</text></svg>">
-    
-    <!-- Apple Touch Icon - iOS Home Screen -->
     <link rel="apple-touch-icon" href="icon.png">
 
     <!-- Tailwind CSS -->
@@ -66,6 +64,8 @@
             @page { margin: 0; }
         }
         
+        .print-only { display: none; }
+        
         /* Smooth transitions */
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn {
@@ -117,8 +117,6 @@
         }
 
         /* --- TRACKING SHEET STYLES (Print View) --- */
-        .print-only { display: none; }
-
         .page {
             background: white;
             width: 210mm;
@@ -209,6 +207,8 @@
         .fork-column {
             flex: 1;
             border-right: 1px solid #cbd5e1;
+            display: flex;
+            flex-direction: column;
         }
         .fork-column:last-child {
             border-right: none;
@@ -352,16 +352,24 @@
                 </div>
             </div>
 
-            <!-- Steps Editor -->
+            <!-- Steps Editor Toolbar -->
             <div class="flex justify-between items-end mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-white">Workflow Steps</h2>
-                    <p class="text-slate-400 text-sm mt-1">Define steps for the selected routine.</p>
+                    <div class="flex gap-3 text-sm mt-1">
+                        <button onclick="window.app.organizeSteps()" class="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors" title="Reorder list based on logic flow">
+                            <i data-lucide="arrow-down-narrow-wide" class="w-3 h-3"></i> Auto-Organize
+                        </button>
+                        <button onclick="window.app.showHelp()" class="text-slate-400 hover:text-white flex items-center gap-1 transition-colors">
+                            <i data-lucide="help-circle" class="w-3 h-3"></i> Help
+                        </button>
+                    </div>
                 </div>
                 <button onclick="window.app.addStep()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-emerald-500/10">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Step
                 </button>
             </div>
+            
             <div id="editor-list" class="space-y-4 mb-12"></div>
 
             <!-- Standalone Commitments Section (Only if Tracking is Enabled) -->
@@ -503,6 +511,20 @@
         </div>
     </div>
 
+    <!-- HELP MODAL -->
+    <div id="help-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <button onclick="document.getElementById('help-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <h2 class="text-xl font-bold mb-4">Workflow Guide</h2>
+            <div class="text-sm text-slate-300 space-y-4">
+                <p><strong>1. Creating a Flow:</strong> Habits are linked like a chain. Every habit points to the "Next Step" ID.</p>
+                <p><strong>2. Inserting a Step:</strong> Use the <span class="text-indigo-400 font-bold">"Insert After"</span> button on an existing habit. This automatically creates a new task and rewires the connections so it fits in between.</p>
+                <p><strong>3. Branching:</strong> Change a step type to "Branch". This creates a Yes/No fork. You must specify which habit comes next for Yes and for No.</p>
+                <p><strong>4. Auto-Organize:</strong> Click "Auto-Organize" to sort the list below visually to match the actual flow order.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST NOTIFICATION -->
     <div id="toast">Saved to Cloud</div>
 
@@ -559,7 +581,7 @@
             historyStack: [],
             user: null,
             householdId: null,
-            householdName: null, // New State
+            householdName: null, 
             householdMembers: {}, 
             trackingMode: 'disabled',
             isAuthModeLogin: true,
@@ -665,7 +687,7 @@
                     workflows: state.workflows,
                     commitments: state.commitments || [],
                     members: members,
-                    name: householdName, // Save default name
+                    name: householdName, 
                     createdBy: state.user.uid,
                     createdAt: new Date().toISOString()
                 });
@@ -860,14 +882,14 @@
             renderEditor();
         }
 
-        async function updateTrackingSettings(mode) {
+        function updateTrackingSettings(mode) {
             state.trackingMode = mode;
             if(state.user) {
                 const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                await setDoc(userRef, { trackingMode: mode }, { merge: true });
+                setDoc(userRef, { trackingMode: mode }, { merge: true });
             }
             showToast(`Tracking: ${mode}`);
-            renderEditor(); // Re-render editor to show/hide fields
+            renderEditor(); 
         }
 
         // --- COMMITMENTS LOGIC ---
@@ -878,7 +900,7 @@
                 id: newId, 
                 text: "New Commitment", 
                 targetCount: 1, 
-                targetPeriod: "week",
+                targetPeriod: "day",
                 assignees: [] 
             });
             saveData();
@@ -1428,6 +1450,84 @@
         }
 
         // --- EDITOR LOGIC ---
+        function organizeSteps() {
+            const w = getActiveWorkflow();
+            if(!w.steps || w.steps.length === 0) return;
+
+            // Simple topological traversal to reorder visually
+            let ordered = [];
+            let visited = new Set();
+            let queue = [w.steps.find(s => s.id === 'start') ? 'start' : w.steps[0].id];
+
+            while(queue.length > 0) {
+                const id = queue.shift();
+                if(visited.has(id)) continue;
+                
+                const step = w.steps.find(s => s.id === id);
+                if(step) {
+                    visited.add(id);
+                    ordered.push(step);
+                    if(step.type === 'decision') {
+                        if(step.nextIfYes) queue.push(step.nextIfYes);
+                        if(step.nextIfNo) queue.push(step.nextIfNo);
+                    } else if (step.next) {
+                        queue.push(step.next);
+                    }
+                }
+            }
+            // Append orphaned steps
+            w.steps.forEach(s => {
+                if(!visited.has(s.id)) ordered.push(s);
+            });
+            w.steps = ordered;
+            saveData();
+            renderEditor();
+            showToast("Steps re-organized");
+        }
+
+        function insertStepAfter(index) {
+            const w = getActiveWorkflow();
+            const currentStep = w.steps[index];
+            const newId = "step-" + Math.floor(Math.random() * 10000);
+            
+            const newStep = { 
+                id: newId, 
+                type: "task", 
+                text: "New Step", 
+                next: currentStep.next || "", // Point new step to where old step pointed
+                assignees: [], 
+                targetCount: 1, 
+                targetPeriod: "day" 
+            };
+
+            // Point old step to new step
+            if(currentStep.type === 'decision') {
+                alert("Cannot insert automatically after a Branch. Add manually.");
+                return;
+            } else {
+                currentStep.next = newId;
+            }
+
+            // Insert in array right after
+            w.steps.splice(index + 1, 0, newStep);
+            saveData();
+            renderEditor();
+            showToast("Step Inserted");
+        }
+
+        function resetTarget(index, isCommitment = false) {
+            if(isCommitment) {
+                state.commitments[index].targetCount = 1;
+                state.commitments[index].targetPeriod = 'day';
+            } else {
+                const w = getActiveWorkflow();
+                w.steps[index].targetCount = 1;
+                w.steps[index].targetPeriod = 'day';
+            }
+            saveData();
+            renderEditor();
+        }
+
         function renderEditor() {
             const container = document.getElementById('editor-list');
             const commitmentsContainer = document.getElementById('commitments-list');
@@ -1460,24 +1560,23 @@
                         }
 
                         const el = document.createElement('div');
-                        el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 relative group';
+                        el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 relative group flex items-center gap-4';
                         el.innerHTML = `
-                            <div class="flex gap-4 items-center">
-                                <input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name">
-                                
-                                <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1">
-                                    <input type="number" value="${comm.targetCount || 1}" onchange="window.app.updateCommitment(${idx}, 'targetCount', this.value)" class="w-10 bg-transparent text-center text-sm focus:outline-none">
-                                    <span class="text-slate-500">/</span>
-                                    <select onchange="window.app.updateCommitment(${idx}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400">
-                                        <option value="day" ${comm.targetPeriod === 'day' ? 'selected' : ''}>Day</option>
-                                        <option value="week" ${comm.targetPeriod === 'week' ? 'selected' : ''}>Week</option>
-                                        <option value="month" ${comm.targetPeriod === 'month' ? 'selected' : ''}>Month</option>
-                                    </select>
-                                </div>
-
-                                ${assigneeHtml}
+                            <input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name">
+                            
+                            <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1">
+                                <input type="number" value="${comm.targetCount || 1}" onchange="window.app.updateCommitment(${idx}, 'targetCount', this.value)" class="w-10 bg-transparent text-center text-sm focus:outline-none">
+                                <span class="text-slate-500">/</span>
+                                <select onchange="window.app.updateCommitment(${idx}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400">
+                                    <option value="day" ${comm.targetPeriod === 'day' ? 'selected' : ''}>Day</option>
+                                    <option value="week" ${comm.targetPeriod === 'week' ? 'selected' : ''}>Week</option>
+                                    <option value="month" ${comm.targetPeriod === 'month' ? 'selected' : ''}>Month</option>
+                                </select>
+                                <button onclick="window.app.resetTarget(${idx}, true)" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
                             </div>
-                            <button onclick="window.app.deleteCommitment(${idx})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
+
+                            ${assigneeHtml}
+                            <button onclick="window.app.deleteCommitment(${idx})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button>
                         `;
                         commitmentsContainer.appendChild(el);
                     });
@@ -1545,7 +1644,7 @@
                 let targetHtml = '';
                 if(state.trackingMode !== 'disabled') {
                     targetHtml = `
-                        <div class="w-1/3 min-w-[120px]">
+                        <div class="w-1/3 min-w-[150px]">
                             <label class="text-xs text-emerald-400 uppercase font-bold mb-1 block">Target Frequency</label>
                             <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5">
                                 <input type="number" value="${step.targetCount || 1}" onchange="window.app.updateStep(${index}, 'targetCount', this.value)" class="w-8 bg-transparent text-center text-sm focus:outline-none">
@@ -1555,6 +1654,7 @@
                                     <option value="week" ${step.targetPeriod === 'week' ? 'selected' : ''}>Week</option>
                                     <option value="month" ${step.targetPeriod === 'month' ? 'selected' : ''}>Month</option>
                                 </select>
+                                <button onclick="window.app.resetTarget(${index})" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
                             </div>
                         </div>
                     `;
@@ -1571,11 +1671,11 @@
                     logicHtml = `
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col">
-                                <label class="text-xs text-slate-500 uppercase font-bold mb-1">If Yes</label>
+                                <label class="text-xs text-emerald-500 uppercase font-bold mb-1">If Yes</label>
                                 <select onchange="window.app.updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfYes)}</select>
                             </div>
                             <div class="flex flex-col">
-                                <label class="text-xs text-slate-500 uppercase font-bold mb-1">If No</label>
+                                <label class="text-xs text-amber-500 uppercase font-bold mb-1">If No</label>
                                 <select onchange="window.app.updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfNo)}</select>
                             </div>
                         </div>`;
@@ -1600,8 +1700,12 @@
                             </select>
                         </div>
                     </div>
-                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex gap-4 mt-2">${targetHtml}${assigneeHtml}</div></div>` : ''}
-                    <button onclick="window.app.deleteStep(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex gap-4 mt-2 items-end">${targetHtml}${assigneeHtml}</div></div>` : ''}
+                    
+                    <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        ${step.type === 'task' ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
+                        <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-200 px-2 py-1 rounded border border-red-900 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
+                    </div>
                 `;
                 container.appendChild(el);
             });
@@ -1642,46 +1746,158 @@
             }
         }
 
-        // --- PRINT GENERATION ---
+        // --- PRINT ENGINE ---
+        function calculateCircles(targetCount, targetPeriod) {
+            const now = new Date();
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const tc = parseInt(targetCount || 1);
+            
+            if (targetPeriod === 'month') return tc;
+            if (targetPeriod === 'week') return Math.ceil((daysInMonth / 7) * tc);
+            return daysInMonth; // daily
+        }
+
         function exportPDF() {
-            const printContainer = document.getElementById('print-view');
+            const container = document.getElementById('print-view');
             const now = new Date();
             const monthName = now.toLocaleString('default', { month: 'long' });
             const year = now.getFullYear();
             const daysInMonth = new Date(year, now.getMonth() + 1, 0).getDate();
             const householdName = state.householdName || (state.householdId ? 'My Household' : 'Personal');
             
-            // Helper to generate circles
-            const getCircles = () => {
+            // --- Helpers ---
+            const renderCircles = (count) => {
                 let html = '';
-                for(let i=1; i<=daysInMonth; i++) {
-                    html += `<div class="circle">${i}</div>`;
-                }
+                for(let i=1; i<=count; i++) html += `<div class="circle">${i}</div>`;
                 return html;
             };
 
-            const getEmptyCircles = () => {
-                let html = '';
-                for(let i=1; i<=daysInMonth; i++) {
-                    html += `<div class="circle"></div>`;
-                }
-                return html;
-            }
-
-            // Helper for Assignee
-            const getAssigneeBadge = (assignees) => {
-                if(!assignees || assignees.length === 0) return `<div class="assignee household">Household</div>`;
-                const names = assignees.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'User').join(', ');
+            const renderAssignee = (uids) => {
+                if(!uids || uids.length === 0) return `<div class="assignee household">Household</div>`;
+                const names = uids.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'User').join(', ');
                 return `<div class="assignee">${names}</div>`;
             };
 
-            const getTargetText = (targetCount, targetPeriod) => {
-                if(!targetCount) return '';
-                if(targetPeriod === 'day' && targetCount === 1) return ''; // Default
-                return `<div class="text-[10px] text-slate-400 mt-1">Target: ${targetCount} / ${targetPeriod}</div>`;
-            }
+            const renderRow = (step) => {
+                const circleCount = calculateCircles(step.targetCount, step.targetPeriod);
+                let targetText = '';
+                if(step.targetPeriod !== 'day' || step.targetCount > 1) {
+                    targetText = `<div class="text-[10px] text-slate-400 mt-1">Target: ${step.targetCount}/${step.targetPeriod} (~${circleCount})</div>`;
+                }
 
-            // HTML Header
+                return `
+                    <div class="row">
+                        <div class="cell-habit">
+                            <div class="font-bold leading-tight">${step.text}</div>
+                            ${renderAssignee(step.assignees)}
+                            ${targetText}
+                        </div>
+                        <div class="cell-checks">
+                            ${renderCircles(circleCount)}
+                        </div>
+                    </div>
+                `;
+            };
+
+            // --- Recursive Graph Renderer ---
+            // Traces the graph and renders HTML. Returns HTML string.
+            // visited: Set of IDs to prevent cycles
+            // stopAt: A step ID where we should stop rendering (used for convergence)
+            
+            const w = getActiveWorkflow();
+            const stepsMap = new Map(w.steps.map(s => [s.id, s]));
+            const visited = new Set();
+
+            // Find convergence point between two branches
+            const findConvergence = (startA, startB) => {
+                let pathA = new Set();
+                let qA = [startA];
+                while(qA.length) {
+                    let id = qA.shift();
+                    if(!id || pathA.has(id)) continue;
+                    pathA.add(id);
+                    let s = stepsMap.get(id);
+                    if(s) {
+                        if(s.type === 'decision') { qA.push(s.nextIfYes); qA.push(s.nextIfNo); }
+                        else if(s.next) qA.push(s.next);
+                    }
+                }
+
+                // Walk B, first node found in pathA is convergence
+                let qB = [startB];
+                let visitedB = new Set();
+                while(qB.length) {
+                    let id = qB.shift();
+                    if(!id || visitedB.has(id)) continue;
+                    if(pathA.has(id)) return id; // Found convergence!
+                    visitedB.add(id);
+                    let s = stepsMap.get(id);
+                    if(s) {
+                        if(s.type === 'decision') { qB.push(s.nextIfYes); qB.push(s.nextIfNo); }
+                        else if(s.next) qB.push(s.next);
+                    }
+                }
+                return null; 
+            };
+
+            const renderFlow = (currentId, stopAt = null) => {
+                let html = '';
+                let curr = currentId;
+
+                while(curr && curr !== stopAt) {
+                    if(visited.has(curr)) break; // Cycle detected
+                    visited.add(curr);
+
+                    const step = stepsMap.get(curr);
+                    if(!step) break;
+
+                    if(step.type === 'end') break;
+
+                    if(step.type === 'decision') {
+                        // 1. Render Header
+                        html += `
+                            <div class="bg-slate-50 border-b border-slate-300 py-2 text-center font-bold text-sm text-slate-600 uppercase tracking-wide">
+                                <i data-lucide="git-branch" class="w-3 h-3 inline mr-1"></i> Decision: ${step.text}
+                            </div>
+                        `;
+                        
+                        // 2. Find Convergence
+                        const convergeId = findConvergence(step.nextIfYes, step.nextIfNo);
+                        
+                        // 3. Render Columns
+                        html += `<div class="fork-container">`;
+                        
+                        // Yes Column
+                        html += `<div class="fork-column">
+                                    <div class="fork-header text-emerald-600">Yes</div>
+                                    ${renderFlow(step.nextIfYes, convergeId)}
+                                 </div>`;
+                        
+                        // No Column
+                        html += `<div class="fork-column">
+                                    <div class="fork-header text-amber-600">No</div>
+                                    ${renderFlow(step.nextIfNo, convergeId)}
+                                 </div>`;
+                        
+                        html += `</div>`;
+                        
+                        // 4. Resume main flow at convergence
+                        curr = convergeId;
+                        // Don't mark convergeId as visited yet, let the loop handle it
+                        if(curr) visited.delete(curr); 
+
+                    } else {
+                        // Task
+                        html += renderRow(step);
+                        curr = step.next;
+                    }
+                }
+                return html;
+            };
+
+            let startId = 'start';
+            if(!stepsMap.has(startId)) startId = w.steps[0].id;
+
             let html = `
                 <div class="page">
                     <div class="flex justify-between items-end mb-8 border-b-4 border-black pb-4">
@@ -1697,104 +1913,40 @@
             `;
 
             // Active Workflows
-            const activeWorkflows = state.workflows.filter(w => w.active);
-            
-            activeWorkflows.forEach(w => {
+            const activeWorkflows = state.workflows.filter(wf => wf.active);
+            activeWorkflows.forEach(wf => {
+                visited.clear(); // Clear visited for each workflow to allow shared steps
                 html += `
                     <div class="tracker-section">
                         <div class="section-header flex justify-between">
-                            <span>${w.name}</span>
+                            <span>${wf.name}</span>
                             <span class="opacity-70 text-sm font-normal normal-case">Workflow</span>
                         </div>
+                        ${renderFlow(wf.steps.find(s=>s.id==='start') ? 'start' : wf.steps[0].id)}
+                    </div>
                 `;
-
-                w.steps.forEach(step => {
-                    if (step.type === 'end') return;
-
-                    if (step.type === 'decision') {
-                        // Render decision header
-                        html += `
-                            <div class="bg-slate-50 border-b border-slate-300 py-2 text-center font-bold text-sm text-slate-600 uppercase tracking-wide">
-                                <i data-lucide="git-branch" class="w-3 h-3 inline mr-1"></i> Decision: ${step.text}
-                            </div>
-                        `;
-                    } else {
-                        // Regular Task
-                        html += `
-                            <div class="row">
-                                <div class="cell-habit">
-                                    <div class="font-bold leading-tight">${step.text}</div>
-                                    ${getAssigneeBadge(step.assignees)}
-                                    ${getTargetText(step.targetCount, step.targetPeriod)}
-                                </div>
-                                <div class="cell-checks">
-                                    ${getCircles()}
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-                html += `</div>`; // End tracker-section
             });
 
-            // Commitments Section
-            if (state.commitments && state.commitments.length > 0) {
-                html += `
-                    <div class="tracker-section">
-                        <div class="section-header bg-indigo-900 flex justify-between">
-                            <span>Commitments</span>
-                            <span class="opacity-70 text-sm font-normal normal-case">Standalone</span>
-                        </div>
-                `;
-                
-                state.commitments.forEach(comm => {
-                    html += `
-                        <div class="row">
-                            <div class="cell-habit">
-                                <div class="font-bold">${comm.text}</div>
-                                ${getAssigneeBadge(comm.assignees)}
-                                ${getTargetText(comm.targetCount, comm.targetPeriod)}
-                            </div>
-                            <div class="cell-checks">
-                                ${getCircles()}
-                            </div>
-                        </div>
-                    `;
-                });
+             // Commitments
+            if (state.commitments.length > 0) {
+                html += `<div class="tracker-section"><div class="section-header bg-indigo-900">Commitments</div>`;
+                state.commitments.forEach(c => html += renderRow(c));
                 html += `</div>`;
             }
 
-            // Monthly Reflection Section (New)
+            // Reflection
             html += `
                 <div class="reflection-container">
-                    <div class="reflection-box">
-                        <div class="reflection-title"><i data-lucide="trophy" class="w-4 h-4"></i> Monthly Wins</div>
-                        <!-- Empty area for writing -->
-                    </div>
-                    <div class="reflection-box">
-                        <div class="reflection-title"><i data-lucide="target" class="w-4 h-4"></i> Focus for Next Month</div>
-                        <!-- Empty area for writing -->
-                    </div>
+                    <div class="reflection-box"><div class="reflection-title"><i data-lucide="trophy" class="w-4 h-4"></i> Monthly Wins</div></div>
+                    <div class="reflection-box"><div class="reflection-title"><i data-lucide="target" class="w-4 h-4"></i> Focus for Next Month</div></div>
+                </div>
+                <div class="mt-8 pt-4 border-t-2 border-slate-200 flex justify-between text-xs text-slate-400"><div>Generated by StackHabits</div></div>
                 </div>
             `;
 
-            // Footer
-            html += `
-                <div class="mt-8 pt-4 border-t-2 border-slate-200 flex justify-between text-xs text-slate-400">
-                    <div>Generated by StackHabits</div>
-                    <!-- Legend removed -->
-                </div>
-                </div> <!-- End Page -->
-            `;
-
-            printContainer.innerHTML = html;
+            container.innerHTML = html;
             lucide.createIcons();
-            
-            // Allow more time for icons/fonts to load, then trigger print
-            // Using a slightly longer timeout can sometimes help mobile browsers
-            setTimeout(() => {
-                window.print();
-            }, 800); 
+            setTimeout(() => window.print(), 800);
         }
 
         window.app = {
@@ -1804,7 +1956,9 @@
             closeRun, startRun, goHome,
             openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold,
             updateTrackingSettings, promptRenameMember, updateAssignee, updateHouseholdName,
-            addCommitment, updateCommitment, updateCommitmentAssignee, deleteCommitment
+            addCommitment, updateCommitment, updateCommitmentAssignee, deleteCommitment,
+            organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
+            insertStepAfter, resetTarget
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
