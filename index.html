@@ -61,7 +61,8 @@
             /* Ensure background colors print */
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             
-            @page { margin: 0; }
+            /* Margin on page */
+            @page { margin: 10mm; } 
         }
         
         .print-only { display: none; }
@@ -122,10 +123,11 @@
             width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
-            padding: 10mm;
+            padding: 10mm; /* Added margin inside page container */
             position: relative;
             color: #0f172a;
             font-family: 'Inter', sans-serif !important;
+            box-sizing: border-box;
         }
 
         .tracker-section {
@@ -153,12 +155,16 @@
         }
 
         .cell-habit {
-            width: 30%;
+            width: 35%;
             padding: 10px;
             border-right: 2px solid #0f172a;
             display: flex;
             flex-direction: column;
             justify-content: center;
+        }
+        
+        .cell-habit.bg-slate-50 {
+            background-color: #f8fafc;
         }
 
         .cell-checks {
@@ -168,6 +174,22 @@
             flex-wrap: wrap;
             gap: 5px; /* Tighter gap */
             align-items: center;
+        }
+        
+        /* Multi-Lane Layout */
+        .cell-checks.block {
+            display: block;
+            padding: 0;
+        }
+        .lane {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .lane:last-child {
+            border-bottom: none;
         }
 
         .circle {
@@ -193,6 +215,12 @@
             border-radius: 3px;
             margin-top: 4px;
             align-self: flex-start;
+        }
+        .assignee.lane-label {
+            width: 60px;
+            text-align: center;
+            flex-shrink: 0;
+            margin-top: 0;
         }
         .assignee.household {
             background: #dbeafe;
@@ -521,6 +549,7 @@
                 <p><strong>2. Inserting a Step:</strong> Use the <span class="text-indigo-400 font-bold">"Insert After"</span> button on an existing habit. This automatically creates a new task and rewires the connections so it fits in between.</p>
                 <p><strong>3. Branching:</strong> Change a step type to "Branch". This creates a Yes/No fork. You must specify which habit comes next for Yes and for No.</p>
                 <p><strong>4. Auto-Organize:</strong> Click "Auto-Organize" to sort the list below visually to match the actual flow order.</p>
+                <p><strong>5. Multi-Assign:</strong> Select multiple people to create tracking lanes for everyone.</p>
             </div>
         </div>
     </div>
@@ -912,7 +941,14 @@
         }
 
         function updateCommitmentAssignee(index, select) {
-            state.commitments[index].assignees = select.value ? [select.value] : [];
+            // Updated to handle multiple selects if the select element is multiple
+            if(select.multiple) {
+                const selected = Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
+                state.commitments[index].assignees = selected;
+            } else {
+                // Keep backward compatibility for single select UI logic if triggered that way
+                state.commitments[index].assignees = select.value ? [select.value] : [];
+            }
             saveData();
         }
 
@@ -1515,6 +1551,51 @@
             showToast("Step Inserted");
         }
 
+        function insertStepBefore(index) {
+            const w = getActiveWorkflow();
+            const currentStep = w.steps[index];
+            const newId = "step-" + Math.floor(Math.random() * 10000);
+            
+            // Only reliably works for start node or linear chains if we traverse fully, but for simple 'start' replacement:
+            const newStep = { 
+                id: newId, 
+                type: "task", 
+                text: "New Start Step", 
+                next: currentStep.id, 
+                assignees: [], 
+                targetCount: 1, 
+                targetPeriod: "day" 
+            };
+
+            if (currentStep.id === 'start' || index === 0) {
+                // If we are replacing 'start', the new step becomes 'start' and old step needs renaming or just logic shift?
+                // Easier: New step takes ID 'start', old step gets renamed ID.
+                // Or: New step just points to old start. But we need to update "Start" pointer in logic.
+                // Our logic finds "start" ID or first element.
+                // Let's just insert at index 0 and make it point to current. 
+                // If current ID was 'start', we should probably rename current to something else and let new step be 'start'?
+                // Actually, let's just insert.
+                
+                // If the current step is actually the semantic "start" of the workflow (id='start'), 
+                // we should probably give the new step the id 'start' and change the old step's id.
+                if(currentStep.id === 'start') {
+                    const oldId = "step-" + Math.floor(Math.random() * 10000);
+                    currentStep.id = oldId;
+                    newStep.id = 'start';
+                    newStep.next = oldId;
+                }
+                w.steps.splice(index, 0, newStep);
+                saveData();
+                renderEditor();
+                showToast("Step Inserted Before");
+            } else {
+                // To insert before an arbitrary node requires finding who points TO it.
+                // This is expensive/complex in this structure without a full graph scan.
+                // We'll limit this feature to the first item for now as requested.
+                alert("Insert Before is currently only supported for the start of the list.");
+            }
+        }
+
         function resetTarget(index, isCommitment = false) {
             if(isCommitment) {
                 state.commitments[index].targetCount = 1;
@@ -1556,7 +1637,8 @@
                                 const isSelected = comm.assignees && comm.assignees.includes(uid);
                                 options += `<option value="${uid}" ${isSelected ? 'selected' : ''}>${name}</option>`;
                             });
-                            assigneeHtml = `<div class="w-1/3"><select onchange="window.app.updateCommitmentAssignee(${idx}, this)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs focus:border-indigo-500 outline-none">${options}</select></div>`;
+                            // Use multiple attribute
+                            assigneeHtml = `<div class="w-1/3"><select multiple onchange="window.app.updateCommitmentAssignee(${idx}, this)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs focus:border-indigo-500 outline-none h-10 overflow-hidden hover:h-auto hover:absolute hover:z-10 transition-all">${options}</select></div>`;
                         }
 
                         const el = document.createElement('div');
@@ -1630,10 +1712,11 @@
                         options += `<option value="${uid}" ${isSelected ? 'selected' : ''}>${name}</option>`;
                     });
 
+                    // Using multiple select
                     assigneeHtml = `
                         <div class="flex-1">
-                            <label class="text-xs text-indigo-400 uppercase font-bold mb-1 block">Assign To</label>
-                            <select onchange="window.app.updateAssignee(${index}, this)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none w-full text-white">
+                            <label class="text-xs text-indigo-400 uppercase font-bold mb-1 block">Assign To (Hold Ctrl)</label>
+                            <select multiple onchange="window.app.updateAssignee(${index}, this)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none w-full text-white h-12 overflow-y-auto">
                                 ${options}
                             </select>
                         </div>
@@ -1703,6 +1786,7 @@
                     ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex gap-4 mt-2 items-end">${targetHtml}${assigneeHtml}</div></div>` : ''}
                     
                     <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
                         ${step.type === 'task' ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
                         <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-200 px-2 py-1 rounded border border-red-900 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
                     </div>
@@ -1721,7 +1805,12 @@
 
         function updateAssignee(index, select) {
             const w = getActiveWorkflow();
-            w.steps[index].assignees = select.value ? [select.value] : [];
+            if(select.multiple) {
+                const selected = Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
+                w.steps[index].assignees = selected;
+            } else {
+                w.steps[index].assignees = select.value ? [select.value] : [];
+            }
             saveData();
         }
 
@@ -1772,43 +1861,74 @@
                 return html;
             };
 
-            const renderAssignee = (uids) => {
-                if(!uids || uids.length === 0) return `<div class="assignee household">Household</div>`;
-                const names = uids.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'User').join(', ');
-                return `<div class="assignee">${names}</div>`;
+            // Enhanced renderer for Multi-User Lanes
+            const renderAssigneeRow = (uids, circleCount) => {
+                if(!uids || uids.length === 0) {
+                    // Default single lane
+                    return `<div class="cell-checks">${renderCircles(circleCount)}</div>`;
+                } else if (uids.length === 1) {
+                    // Single user lane
+                    const name = state.householdMembers[uids[0]] ? state.householdMembers[uids[0]].name : 'User';
+                    return `
+                        <div class="cell-checks">
+                            <span class="assignee">${name}</span>
+                            ${renderCircles(circleCount)}
+                        </div>`;
+                } else {
+                    // Multiple users (Lanes)
+                    let html = `<div class="cell-checks block">`;
+                    uids.forEach(uid => {
+                        const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
+                        html += `
+                            <div class="lane">
+                                <span class="assignee lane-label">${name}</span>
+                                <div class="flex flex-wrap gap-1">
+                                    ${renderCircles(circleCount)}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                    return html;
+                }
             };
 
-            const renderRow = (step) => {
+            const renderAssigneeBadge = (uids) => {
+                if(!uids || uids.length === 0) return `<div class="assignee household">Household</div>`;
+                if(uids.length > 1) return `<div class="text-[10px] text-slate-500 mt-1">Multi-Assign</div>`;
+                const names = uids.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'User').join(', ');
+                return `<div class="assignee">${names}</div>`;
+            }
+
+            const renderRow = (step, isFork = false) => {
                 const circleCount = calculateCircles(step.targetCount, step.targetPeriod);
                 let targetText = '';
                 if(step.targetPeriod !== 'day' || step.targetCount > 1) {
                     targetText = `<div class="text-[10px] text-slate-400 mt-1">Target: ${step.targetCount}/${step.targetPeriod} (~${circleCount})</div>`;
                 }
 
+                // If inside a fork (column), layout might be slightly simpler or different?
+                // The prompt asks to look like the preview. In preview, multi-lanes are handled cleanly.
+                // We use the same structure but modify the check cell content.
+
                 return `
-                    <div class="row">
-                        <div class="cell-habit">
+                    <div class="row ${isFork ? 'border-b-0' : ''}">
+                        <div class="cell-habit ${isFork ? 'bg-white' : 'bg-slate-50'}">
                             <div class="font-bold leading-tight">${step.text}</div>
-                            ${renderAssignee(step.assignees)}
+                            ${renderAssigneeBadge(step.assignees)}
                             ${targetText}
                         </div>
-                        <div class="cell-checks">
-                            ${renderCircles(circleCount)}
-                        </div>
+                        ${renderAssigneeRow(step.assignees, circleCount)}
                     </div>
                 `;
             };
 
             // --- Recursive Graph Renderer ---
-            // Traces the graph and renders HTML. Returns HTML string.
-            // visited: Set of IDs to prevent cycles
-            // stopAt: A step ID where we should stop rendering (used for convergence)
             
             const w = getActiveWorkflow();
             const stepsMap = new Map(w.steps.map(s => [s.id, s]));
             const visited = new Set();
 
-            // Find convergence point between two branches
             const findConvergence = (startA, startB) => {
                 let pathA = new Set();
                 let qA = [startA];
@@ -1823,13 +1943,12 @@
                     }
                 }
 
-                // Walk B, first node found in pathA is convergence
                 let qB = [startB];
                 let visitedB = new Set();
                 while(qB.length) {
                     let id = qB.shift();
                     if(!id || visitedB.has(id)) continue;
-                    if(pathA.has(id)) return id; // Found convergence!
+                    if(pathA.has(id)) return id;
                     visitedB.add(id);
                     let s = stepsMap.get(id);
                     if(s) {
@@ -1840,12 +1959,12 @@
                 return null; 
             };
 
-            const renderFlow = (currentId, stopAt = null) => {
+            const renderFlow = (currentId, stopAt = null, inFork = false) => {
                 let html = '';
                 let curr = currentId;
 
                 while(curr && curr !== stopAt) {
-                    if(visited.has(curr)) break; // Cycle detected
+                    if(visited.has(curr)) break; 
                     visited.add(curr);
 
                     const step = stepsMap.get(curr);
@@ -1854,41 +1973,33 @@
                     if(step.type === 'end') break;
 
                     if(step.type === 'decision') {
-                        // 1. Render Header
+                        // Header
                         html += `
-                            <div class="bg-slate-50 border-b border-slate-300 py-2 text-center font-bold text-sm text-slate-600 uppercase tracking-wide">
-                                <i data-lucide="git-branch" class="w-3 h-3 inline mr-1"></i> Decision: ${step.text}
-                            </div>
+                            <div class="border-b border-slate-300">
+                                <div class="fork-decision-title">
+                                    <i data-lucide="git-branch" class="w-4 h-4"></i> Decision: ${step.text}
+                                </div>
                         `;
                         
-                        // 2. Find Convergence
                         const convergeId = findConvergence(step.nextIfYes, step.nextIfNo);
                         
-                        // 3. Render Columns
+                        // Columns
                         html += `<div class="fork-container">`;
-                        
-                        // Yes Column
                         html += `<div class="fork-column">
                                     <div class="fork-header text-emerald-600">Yes</div>
-                                    ${renderFlow(step.nextIfYes, convergeId)}
+                                    ${renderFlow(step.nextIfYes, convergeId, true)}
                                  </div>`;
-                        
-                        // No Column
                         html += `<div class="fork-column">
                                     <div class="fork-header text-amber-600">No</div>
-                                    ${renderFlow(step.nextIfNo, convergeId)}
+                                    ${renderFlow(step.nextIfNo, convergeId, true)}
                                  </div>`;
+                        html += `</div></div>`; // Close fork container and outer wrapper
                         
-                        html += `</div>`;
-                        
-                        // 4. Resume main flow at convergence
                         curr = convergeId;
-                        // Don't mark convergeId as visited yet, let the loop handle it
                         if(curr) visited.delete(curr); 
 
                     } else {
-                        // Task
-                        html += renderRow(step);
+                        html += renderRow(step, inFork);
                         curr = step.next;
                     }
                 }
@@ -1912,10 +2023,9 @@
                     </div>
             `;
 
-            // Active Workflows
             const activeWorkflows = state.workflows.filter(wf => wf.active);
             activeWorkflows.forEach(wf => {
-                visited.clear(); // Clear visited for each workflow to allow shared steps
+                visited.clear(); 
                 html += `
                     <div class="tracker-section">
                         <div class="section-header flex justify-between">
@@ -1927,14 +2037,12 @@
                 `;
             });
 
-             // Commitments
             if (state.commitments.length > 0) {
-                html += `<div class="tracker-section"><div class="section-header bg-indigo-900">Commitments</div>`;
+                html += `<div class="tracker-section"><div class="section-header bg-indigo-900 flex justify-between"><span>Commitments</span><span class="opacity-70 text-sm font-normal normal-case">Standalone</span></div>`;
                 state.commitments.forEach(c => html += renderRow(c));
                 html += `</div>`;
             }
 
-            // Reflection
             html += `
                 <div class="reflection-container">
                     <div class="reflection-box"><div class="reflection-title"><i data-lucide="trophy" class="w-4 h-4"></i> Monthly Wins</div></div>
@@ -1955,10 +2063,10 @@
             switchEditWorkflow, createWorkflow, renameWorkflow, deleteWorkflow, toggleWorkflowActive,
             closeRun, startRun, goHome,
             openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold,
-            updateTrackingSettings, promptRenameMember, updateAssignee, updateHouseholdName,
-            addCommitment, updateCommitment, updateCommitmentAssignee, deleteCommitment,
+            updateTrackingSettings, promptRenameMember, updateAssignee, updateHouseholdName, updateCommitmentAssignee,
+            addCommitment, updateCommitment, deleteCommitment,
             organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
-            insertStepAfter, resetTarget
+            insertStepAfter, insertStepBefore, resetTarget
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
