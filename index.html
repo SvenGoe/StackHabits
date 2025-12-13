@@ -257,7 +257,11 @@
             text-align: center;
             font-weight: bold;
             font-size: 0.9rem;
-            border-bottom: 1px solid #cbd5e1;
+            /* Border removed as per request to not separate from circles,
+               but keeping container border-bottom for clear sectioning logic if needed. 
+               The request said "without any border separating them", likely referring 
+               to the border between the title and the columns below. */
+            border-bottom: none; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -269,7 +273,8 @@
             display: flex;
             gap: 20px;
             margin-top: 3rem;
-            border-top: 4px solid #0f172a;
+            /* Border removed as per request */
+            border-top: none; 
             padding-top: 2rem;
             page-break-inside: avoid;
         }
@@ -940,18 +945,6 @@
             saveData();
         }
 
-        function updateCommitmentAssignee(index, select) {
-            // Updated to handle multiple selects if the select element is multiple
-            if(select.multiple) {
-                const selected = Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
-                state.commitments[index].assignees = selected;
-            } else {
-                // Keep backward compatibility for single select UI logic if triggered that way
-                state.commitments[index].assignees = select.value ? [select.value] : [];
-            }
-            saveData();
-        }
-
         function deleteCommitment(index) {
             if(confirm("Delete this commitment?")) {
                 state.commitments.splice(index, 1);
@@ -1568,16 +1561,6 @@
             };
 
             if (currentStep.id === 'start' || index === 0) {
-                // If we are replacing 'start', the new step becomes 'start' and old step needs renaming or just logic shift?
-                // Easier: New step takes ID 'start', old step gets renamed ID.
-                // Or: New step just points to old start. But we need to update "Start" pointer in logic.
-                // Our logic finds "start" ID or first element.
-                // Let's just insert at index 0 and make it point to current. 
-                // If current ID was 'start', we should probably rename current to something else and let new step be 'start'?
-                // Actually, let's just insert.
-                
-                // If the current step is actually the semantic "start" of the workflow (id='start'), 
-                // we should probably give the new step the id 'start' and change the old step's id.
                 if(currentStep.id === 'start') {
                     const oldId = "step-" + Math.floor(Math.random() * 10000);
                     currentStep.id = oldId;
@@ -1589,9 +1572,6 @@
                 renderEditor();
                 showToast("Step Inserted Before");
             } else {
-                // To insert before an arbitrary node requires finding who points TO it.
-                // This is expensive/complex in this structure without a full graph scan.
-                // We'll limit this feature to the first item for now as requested.
                 alert("Insert Before is currently only supported for the start of the list.");
             }
         }
@@ -1604,6 +1584,61 @@
                 const w = getActiveWorkflow();
                 w.steps[index].targetCount = 1;
                 w.steps[index].targetPeriod = 'day';
+            }
+            saveData();
+            renderEditor();
+        }
+
+        // Helper to render user chips
+        function renderAssigneeSelector(index, currentAssignees, isCommitment) {
+            if (!state.householdId) return '';
+
+            const members = state.householdMembers;
+            // Empty list implies "Household"
+            const isHousehold = !currentAssignees || currentAssignees.length === 0;
+            
+            let html = `<div class="flex flex-wrap gap-2 mt-2">`;
+            
+            // Household Tag
+            html += `<button onclick="window.app.setAssignee('${index}', 'HOUSEHOLD', ${isCommitment})" 
+                class="px-3 py-1 rounded-full text-xs font-bold transition-colors border ${isHousehold ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500'}">
+                Household
+            </button>`;
+
+            // Member Tags
+            Object.keys(members).forEach(uid => {
+                const isSelected = currentAssignees && currentAssignees.includes(uid);
+                html += `<button onclick="window.app.toggleAssignee('${index}', '${uid}', ${isCommitment})" 
+                    class="px-3 py-1 rounded-full text-xs font-bold transition-colors border ${isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500'}">
+                    ${members[uid].name}
+                </button>`;
+            });
+
+            html += `</div>`;
+            return html;
+        }
+
+        function toggleAssignee(index, uid, isCommitment) {
+            let list = isCommitment ? state.commitments[index].assignees : getActiveWorkflow().steps[index].assignees;
+            if(!list) list = [];
+
+            if(list.includes(uid)) {
+                list = list.filter(u => u !== uid);
+            } else {
+                list.push(uid);
+            }
+
+            if(isCommitment) state.commitments[index].assignees = list;
+            else getActiveWorkflow().steps[index].assignees = list;
+            
+            saveData();
+            renderEditor();
+        }
+
+        function setAssignee(index, type, isCommitment) {
+            if(type === 'HOUSEHOLD') {
+                if(isCommitment) state.commitments[index].assignees = [];
+                else getActiveWorkflow().steps[index].assignees = [];
             }
             saveData();
             renderEditor();
@@ -1627,38 +1662,30 @@
                     commitmentsContainer.innerHTML = '<div class="text-slate-500 text-sm italic">No standalone commitments yet.</div>';
                 } else {
                     state.commitments.forEach((comm, idx) => {
-                        // Assignment UI for Commitment
-                        let assigneeHtml = '';
-                        if(state.householdId) {
-                            const members = Object.keys(state.householdMembers);
-                            let options = `<option value="" ${(!comm.assignees || comm.assignees.length === 0) ? 'selected' : ''}>Household (Default)</option>`;
-                            members.forEach(uid => {
-                                const name = state.householdMembers[uid].name;
-                                const isSelected = comm.assignees && comm.assignees.includes(uid);
-                                options += `<option value="${uid}" ${isSelected ? 'selected' : ''}>${name}</option>`;
-                            });
-                            // Use multiple attribute
-                            assigneeHtml = `<div class="w-1/3"><select multiple onchange="window.app.updateCommitmentAssignee(${idx}, this)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs focus:border-indigo-500 outline-none h-10 overflow-hidden hover:h-auto hover:absolute hover:z-10 transition-all">${options}</select></div>`;
-                        }
+                        // Use new Tag Selector
+                        const assigneeHtml = renderAssigneeSelector(idx, comm.assignees, true);
 
                         const el = document.createElement('div');
-                        el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 relative group flex items-center gap-4';
+                        el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 relative group';
                         el.innerHTML = `
-                            <input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name">
-                            
-                            <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1">
-                                <input type="number" value="${comm.targetCount || 1}" onchange="window.app.updateCommitment(${idx}, 'targetCount', this.value)" class="w-10 bg-transparent text-center text-sm focus:outline-none">
-                                <span class="text-slate-500">/</span>
-                                <select onchange="window.app.updateCommitment(${idx}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400">
-                                    <option value="day" ${comm.targetPeriod === 'day' ? 'selected' : ''}>Day</option>
-                                    <option value="week" ${comm.targetPeriod === 'week' ? 'selected' : ''}>Week</option>
-                                    <option value="month" ${comm.targetPeriod === 'month' ? 'selected' : ''}>Month</option>
-                                </select>
-                                <button onclick="window.app.resetTarget(${idx}, true)" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                            <div class="flex items-center gap-4 mb-2">
+                                <input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name">
+                                <button onclick="window.app.deleteCommitment(${idx})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button>
                             </div>
-
+                            
+                            <div class="flex flex-wrap gap-4 items-center">
+                                <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1">
+                                    <input type="number" value="${comm.targetCount || 1}" onchange="window.app.updateCommitment(${idx}, 'targetCount', this.value)" class="w-10 bg-transparent text-center text-sm focus:outline-none">
+                                    <span class="text-slate-500">/</span>
+                                    <select onchange="window.app.updateCommitment(${idx}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400">
+                                        <option value="day" ${comm.targetPeriod === 'day' ? 'selected' : ''}>Day</option>
+                                        <option value="week" ${comm.targetPeriod === 'week' ? 'selected' : ''}>Week</option>
+                                        <option value="month" ${comm.targetPeriod === 'month' ? 'selected' : ''}>Month</option>
+                                    </select>
+                                    <button onclick="window.app.resetTarget(${idx}, true)" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                                </div>
+                            </div>
                             ${assigneeHtml}
-                            <button onclick="window.app.deleteCommitment(${idx})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button>
                         `;
                         commitmentsContainer.appendChild(el);
                     });
@@ -1701,27 +1728,8 @@
                     return opts;
                 };
 
-                // ASSIGNMENT SELECTOR
-                let assigneeHtml = '';
-                if(state.householdId) {
-                    const members = Object.keys(state.householdMembers);
-                    let options = `<option value="" ${(!step.assignees || step.assignees.length === 0) ? 'selected' : ''}>Household (Default)</option>`;
-                    members.forEach(uid => {
-                        const name = state.householdMembers[uid].name;
-                        const isSelected = step.assignees && step.assignees.includes(uid);
-                        options += `<option value="${uid}" ${isSelected ? 'selected' : ''}>${name}</option>`;
-                    });
-
-                    // Using multiple select
-                    assigneeHtml = `
-                        <div class="flex-1">
-                            <label class="text-xs text-indigo-400 uppercase font-bold mb-1 block">Assign To (Hold Ctrl)</label>
-                            <select multiple onchange="window.app.updateAssignee(${index}, this)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none w-full text-white h-12 overflow-y-auto">
-                                ${options}
-                            </select>
-                        </div>
-                    `;
-                }
+                // ASSIGNMENT SELECTOR (New Tag UI)
+                const assigneeHtml = renderAssigneeSelector(index, step.assignees, false);
 
                 // TRACKING TARGET UI
                 let targetHtml = '';
@@ -1783,7 +1791,7 @@
                             </select>
                         </div>
                     </div>
-                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex gap-4 mt-2 items-end">${targetHtml}${assigneeHtml}</div></div>` : ''}
+                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex gap-4 mt-2 items-end">${targetHtml}</div>${assigneeHtml}</div>` : ''}
                     
                     <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
@@ -1904,12 +1912,8 @@
                 const circleCount = calculateCircles(step.targetCount, step.targetPeriod);
                 let targetText = '';
                 if(step.targetPeriod !== 'day' || step.targetCount > 1) {
-                    targetText = `<div class="text-[10px] text-slate-400 mt-1">Target: ${step.targetCount}/${step.targetPeriod} (~${circleCount})</div>`;
+                    targetText = `<div class="text-[10px] text-slate-400 mt-1">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
                 }
-
-                // If inside a fork (column), layout might be slightly simpler or different?
-                // The prompt asks to look like the preview. In preview, multi-lanes are handled cleanly.
-                // We use the same structure but modify the check cell content.
 
                 return `
                     <div class="row ${isFork ? 'border-b-0' : ''}">
@@ -1999,6 +2003,7 @@
                         if(curr) visited.delete(curr); 
 
                     } else {
+                        // Standard row
                         html += renderRow(step, inFork);
                         curr = step.next;
                     }
@@ -2063,10 +2068,10 @@
             switchEditWorkflow, createWorkflow, renameWorkflow, deleteWorkflow, toggleWorkflowActive,
             closeRun, startRun, goHome,
             openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold,
-            updateTrackingSettings, promptRenameMember, updateAssignee, updateHouseholdName, updateCommitmentAssignee,
+            updateTrackingSettings, promptRenameMember, updateAssignee, updateHouseholdName,
             addCommitment, updateCommitment, deleteCommitment,
             organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
-            insertStepAfter, insertStepBefore, resetTarget
+            insertStepAfter, insertStepBefore, resetTarget, toggleAssignee, setAssignee
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
