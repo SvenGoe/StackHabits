@@ -257,10 +257,7 @@
             text-align: center;
             font-weight: bold;
             font-size: 0.9rem;
-            /* Border removed as per request to not separate from circles,
-               but keeping container border-bottom for clear sectioning logic if needed. 
-               The request said "without any border separating them", likely referring 
-               to the border between the title and the columns below. */
+            /* Border removed as per request to not separate from circles */
             border-bottom: none; 
             display: flex;
             align-items: center;
@@ -458,7 +455,8 @@
                     </label>
                 </div>
             </div>
-
+            
+                <!-- Not in Household -->
             <!-- HOUSEHOLD SECTION -->
             <div class="mb-6">
                 <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Household Management</h3>
@@ -687,7 +685,6 @@
         }
 
         // --- HOUSEHOLD LOGIC ---
-
         async function loadUserProfile(uid) {
             try {
                 const docRef = doc(db, "artifacts", appId, "users", uid, "data", "profile");
@@ -740,7 +737,7 @@
                 showToast("Error creating household", true);
             }
         }
-
+        
         async function joinHousehold() {
             const input = document.getElementById('join-household-id');
             const id = input.value.trim().toUpperCase();
@@ -755,7 +752,6 @@
                     return;
                 }
 
-                // Add self to members
                 const data = snap.data();
                 const members = data.members || {};
                 members[state.user.uid] = { 
@@ -1214,7 +1210,6 @@
         }
 
         // --- WORKFLOW MANAGEMENT ---
-        
         function switchEditWorkflow(id) {
             state.activeWorkflowId = id;
             renderEditor();
@@ -1523,17 +1518,19 @@
                 id: newId, 
                 type: "task", 
                 text: "New Step", 
-                next: currentStep.next || "", // Point new step to where old step pointed
+                next: "", 
                 assignees: [], 
                 targetCount: 1, 
                 targetPeriod: "day" 
             };
 
-            // Point old step to new step
             if(currentStep.type === 'decision') {
-                alert("Cannot insert automatically after a Branch. Add manually.");
-                return;
+                 // For decision, default to Yes path or just leave unwired in array?
+                 // Simple logic: rewire NextIfYes to point to new, new points to old NextIfYes
+                 newStep.next = currentStep.nextIfYes || "";
+                 currentStep.nextIfYes = newId;
             } else {
+                newStep.next = currentStep.next || "";
                 currentStep.next = newId;
             }
 
@@ -1795,7 +1792,7 @@
                     
                     <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
-                        ${step.type === 'task' ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
+                        ${(step.type === 'task' || index === 0) ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
                         <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-200 px-2 py-1 rounded border border-red-900 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
                     </div>
                 `;
@@ -1915,9 +1912,37 @@
                     targetText = `<div class="text-[10px] text-slate-400 mt-1">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
                 }
 
+                if (isFork) {
+                     // Stacked Layout for Forks
+                    return `
+                    <div class="border-b border-slate-200 last:border-b-0">
+                        <div class="p-3">
+                            <div class="font-bold text-sm leading-tight">${step.text}</div>
+                            ${renderAssigneeBadge(step.assignees)}
+                            ${targetText}
+                        </div>
+                        <div class="px-3 pb-3">
+                             <div class="cell-checks" style="padding:0">
+                                ${renderAssigneeRow(step.assignees, circleCount).replace('cell-checks', '').replace('padding: 10px', '')}
+                             </div>
+                        </div>
+                    </div>
+                    `;
+                    // Note: renderAssigneeRow returns a div with class cell-checks.
+                    // We need to strip the outer class or just use the inner HTML if it wasn't multi-lane.
+                    // Actually, simpler is to just let renderAssigneeRow do its thing but control container.
+                    // renderAssigneeRow returns: <div class="cell-checks">...</div> OR <div class="cell-checks block">...</div>
+                    // The cell-checks class adds padding:10px and flex:1.
+                    // Inside the fork stack, we want it to just flow.
+                    // Let's rewrite renderAssigneeRow for flexibility or hack it here by string replace for now to ensure layout matches preview exactly.
+                    // Actually, re-calling renderAssigneeRow is fine, but the container "px-3 pb-3" handles spacing.
+                    // The inner "cell-checks" adds 10px padding. Double padding might look odd.
+                    // Let's modify renderAssigneeRow slightly to accept a 'clean' param or just override css.
+                }
+
                 return `
-                    <div class="row ${isFork ? 'border-b-0' : ''}">
-                        <div class="cell-habit ${isFork ? 'bg-white' : 'bg-slate-50'}">
+                    <div class="row">
+                        <div class="cell-habit bg-slate-50">
                             <div class="font-bold leading-tight">${step.text}</div>
                             ${renderAssigneeBadge(step.assignees)}
                             ${targetText}
