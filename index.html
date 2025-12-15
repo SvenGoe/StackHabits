@@ -378,7 +378,7 @@
                 <div class="flex gap-2">
                     <button onclick="window.app.createWorkflow()" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="New Workflow"><i data-lucide="plus" class="w-4 h-4"></i></button>
                     <button onclick="window.app.renameWorkflow()" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Rename"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                    <button onclick="window.app.toggleWorkflowActive()" id="btn-toggle-active" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Toggle Active"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                    <button onclick="window.app.toggleWorkflowActive()" id="btn-toggle-active" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Toggle Active for Me"><i data-lucide="eye" class="w-4 h-4"></i></button>
                     <button onclick="window.app.deleteWorkflow()" class="p-2 bg-red-900/50 hover:bg-red-900/80 text-red-200 border border-red-900 rounded transition-colors" title="Delete Workflow"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
             </div>
@@ -431,7 +431,7 @@
             
             <!-- TRACKING SECTION -->
             <div class="mb-8">
-                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Tracking</h3>
+                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Tracking (Personal)</h3>
                 <div class="space-y-2">
                     <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
                         <input type="radio" name="tracking_mode" value="disabled" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
@@ -668,6 +668,7 @@
             householdName: null, 
             householdMembers: {}, 
             trackingMode: 'disabled',
+            userActiveWorkflowIds: [], // New user-specific setting
             isAuthModeLogin: true,
             isOnline: false,
             isLoadingAuth: true
@@ -716,6 +717,7 @@
                     state.householdId = null;
                     state.householdName = null;
                     state.householdMembers = {};
+                    state.userActiveWorkflowIds = [];
 
                     if (user) {
                         console.log("User logged in:", user.uid);
@@ -764,9 +766,26 @@
                     const data = docSnap.data();
                     state.householdId = data.householdId || null;
                     state.trackingMode = data.trackingMode || 'disabled';
+                    state.userActiveWorkflowIds = data.activeWorkflowIds || [];
+                } else {
+                     state.userActiveWorkflowIds = [];
                 }
             } catch (e) {
                 console.error("Error loading profile", e);
+            }
+        }
+        
+        async function saveUserProfile() {
+            if (!state.user) return;
+            try {
+                const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(docRef, {
+                    householdId: state.householdId,
+                    trackingMode: state.trackingMode,
+                    activeWorkflowIds: state.userActiveWorkflowIds
+                }, { merge: true });
+            } catch (e) {
+                console.error("Error saving profile", e);
             }
         }
 
@@ -794,12 +813,11 @@
                     createdAt: new Date().toISOString()
                 });
 
-                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                await setDoc(userRef, { householdId: newHouseholdId }, { merge: true });
-
                 state.householdId = newHouseholdId;
                 state.householdName = householdName;
                 state.householdMembers = members;
+                await saveUserProfile();
+
                 showToast("Household Created!");
                 renderSettingsUI();
                 renderAuthUI();
@@ -832,11 +850,10 @@
                 };
 
                 await setDoc(householdRef, { members: members }, { merge: true });
-
-                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                await setDoc(userRef, { householdId: id }, { merge: true });
-
+                
                 state.householdId = id;
+                await saveUserProfile();
+
                 showToast("Joined Household!");
                 
                 await loadDataFromFirestore(state.user.uid);
@@ -862,12 +879,11 @@
                     await setDoc(householdRef, { members }, { merge: true });
                 }
 
-                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                await setDoc(userRef, { householdId: null }, { merge: true });
-
                 state.householdId = null;
                 state.householdName = null;
                 state.householdMembers = {};
+                await saveUserProfile();
+
                 showToast("Left Household");
 
                 saveData(); 
@@ -986,10 +1002,8 @@
 
         function updateTrackingSettings(mode) {
             state.trackingMode = mode;
-            if(state.user) {
-                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                setDoc(userRef, { trackingMode: mode }, { merge: true });
-            }
+            // Explicitly save to profile
+            saveUserProfile();
             showToast(`Tracking: ${mode}`);
             renderEditor(); 
         }
@@ -1048,6 +1062,61 @@
 
         function getActiveWorkflow() {
             return state.workflows.find(w => w.id === state.activeWorkflowId) || state.workflows[0];
+        }
+        
+        function isWorkflowActive(id) {
+            // Local/Guest mode fallback: check shared property
+            if (!state.user) {
+                const w = state.workflows.find(wf => wf.id === id);
+                return w ? w.active !== false : true;
+            }
+            
+            // If user has NO preferences set (new user), default to all active
+            if (!state.userActiveWorkflowIds || state.userActiveWorkflowIds.length === 0) {
+                 const w = state.workflows.find(wf => wf.id === id);
+                 // Fallback to the legacy 'active' flag to prevent everything disappearing on migration
+                 return w ? w.active !== false : true;
+            }
+            
+            return state.userActiveWorkflowIds.includes(id);
+        }
+
+        function toggleWorkflowActive() {
+            const id = state.activeWorkflowId;
+            
+            if (!state.user) {
+                // Legacy Local Toggle
+                const w = state.workflows.find(wf => wf.id === id);
+                if (w) {
+                    w.active = !w.active;
+                    saveData();
+                }
+            } else {
+                // User-Specific Profile Toggle
+                if (!state.userActiveWorkflowIds) state.userActiveWorkflowIds = [];
+                
+                // Note: If array is empty, we might need to populate it first with defaults?
+                // For now, if empty, we assume all are 'active' by default logic, 
+                // so if they toggle one, we need to decide state.
+                // Simple logic: If it's currently considered active, remove it. If inactive, add it.
+                const isActive = isWorkflowActive(id);
+                
+                if (isActive) {
+                    // Make it inactive -> remove from list? 
+                    // Wait, if list is empty, isActive is true by default. 
+                    // So we need to populate the list with ALL other active ones, effectively 'unchecking' this one.
+                    if (state.userActiveWorkflowIds.length === 0) {
+                         // Populate with all EXCEPT this one
+                         state.userActiveWorkflowIds = state.workflows.map(w => w.id).filter(wid => wid !== id);
+                    } else {
+                        state.userActiveWorkflowIds = state.userActiveWorkflowIds.filter(wid => wid !== id);
+                    }
+                } else {
+                    state.userActiveWorkflowIds.push(id);
+                }
+                saveUserProfile();
+            }
+            renderEditor();
         }
 
         function loadDataFromLocal() {
@@ -1324,12 +1393,6 @@
             }
         }
 
-        function toggleWorkflowActive() {
-            const w = getActiveWorkflow();
-            w.active = !w.active;
-            saveData();
-        }
-
         // --- RUN VIEW LOGIC ---
         function switchView(viewName) {
             document.getElementById('view-run').classList.add('hidden');
@@ -1367,18 +1430,78 @@
             renderDashboard();
         }
 
+        // --- SMART SKIPPING LOGIC ---
+        function isStepRelevant(step) {
+            // 1. If not logged in or no household, everything is relevant
+            if (!state.user || !state.householdId) return true;
+            
+            // 2. If no assignees, it's for everyone
+            if (!step.assignees || step.assignees.length === 0) return true;
+            
+            // 3. Check if user is in the assignee list
+            return step.assignees.includes(state.user.uid);
+        }
+
+        function findNextRelevantStep(startStepId, w) {
+            let currId = startStepId;
+            let safety = 0;
+            
+            while(currId && safety < 100) {
+                // End conditions
+                if (currId === COMPLETED_FLOW_ID) return COMPLETED_FLOW_ID;
+                
+                const step = w.steps.find(s => s.id === currId);
+                if (!step) return currId; // Let renderer handle error
+
+                if (step.type === 'end') return currId;
+                
+                // Decisions: We can't auto-skip decisions easily because we don't know the answer.
+                // We show them regardless of assignment to avoid breaking the flow.
+                if (step.type === 'decision') return currId;
+
+                // Tasks: Check relevance
+                if (isStepRelevant(step)) return currId;
+
+                // If not relevant, auto-advance
+                currId = step.next;
+                safety++;
+            }
+            return currId;
+        }
+
         function startRun(workflowId) {
             state.activeWorkflowId = workflowId;
             state.historyStack = [];
             
             const w = getActiveWorkflow();
+            let initialId = 'start';
             const startStep = w.steps.find(s => s.id === 'start');
-            state.currentStepId = startStep ? 'start' : w.steps[0].id;
+            if(!startStep && w.steps.length > 0) initialId = w.steps[0].id;
+            
+            // Start at the first relevant step for this user
+            state.currentStepId = findNextRelevantStep(initialId, w);
 
             document.getElementById('run-dashboard').classList.add('hidden');
             document.getElementById('run-dashboard').classList.remove('grid');
             document.getElementById('run-active').classList.remove('hidden');
             document.getElementById('run-active').classList.add('flex');
+            
+            renderRunView();
+        }
+
+        function nextStep(targetId) {
+            const w = getActiveWorkflow();
+            
+            state.historyStack.push(state.currentStepId);
+
+            if (!targetId) {
+                // Try to find end
+                const endStep = w.steps.find(s => s.type === 'end');
+                state.currentStepId = endStep ? endStep.id : COMPLETED_FLOW_ID;
+            } else {
+                // Find next RELEVANT step (skipping other people's tasks)
+                state.currentStepId = findNextRelevantStep(targetId, w);
+            }
             
             renderRunView();
         }
@@ -1395,7 +1518,8 @@
             
             container.innerHTML = '';
 
-            const activeWorkflows = state.workflows.filter(w => w.active);
+            // Filter using user-specific settings
+            const activeWorkflows = state.workflows.filter(w => isWorkflowActive(w.id));
 
             if (activeWorkflows.length === 0) {
                 container.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">No active workflows.<br>Go to Edit to create or enable one.</div>';
@@ -1432,7 +1556,8 @@
                 onEnd: function (evt) {
                     const newIds = Array.from(container.children).map(el => el.getAttribute('data-id'));
                     const activeSorted = newIds.map(id => state.workflows.find(w => w.id === id));
-                    const inactive = state.workflows.filter(w => !w.active);
+                    // Keep inactive ones at the bottom/end of the list in memory
+                    const inactive = state.workflows.filter(w => !newIds.includes(w.id));
                     state.workflows = [...activeSorted, ...inactive];
                     saveData();
                 }
@@ -1464,6 +1589,7 @@
 
             let step = w.steps.find(s => s.id === state.currentStepId);
             if (!step) {
+                // Fallback if step missing
                 step = w.steps[0];
                 state.currentStepId = step.id;
             }
@@ -1516,34 +1642,8 @@
             lucide.createIcons();
         }
 
-        function nextStep(targetId) {
-            const w = getActiveWorkflow();
-            const targetStep = w.steps.find(s => s.id === targetId);
-            
-            if (!targetId || !targetStep) {
-                const endStep = w.steps.find(s => s.type === 'end');
-                if (endStep) {
-                     state.historyStack.push(state.currentStepId);
-                     state.currentStepId = endStep.id;
-                } else {
-                    state.historyStack.push(state.currentStepId);
-                    state.currentStepId = COMPLETED_FLOW_ID;
-                }
-            } else {
-                state.historyStack.push(state.currentStepId);
-                state.currentStepId = targetId;
-            }
-            renderRunView();
-        }
-
         function restartFlow() {
-            const w = getActiveWorkflow();
-            if(w && w.steps.length > 0) {
-                const startStep = w.steps.find(s=>s.id==='start');
-                state.currentStepId = startStep ? 'start' : w.steps[0].id;
-            }
-            state.historyStack = [];
-            renderRunView();
+            startRun(state.activeWorkflowId);
         }
 
         // --- EDITOR LOGIC ---
@@ -1760,25 +1860,28 @@
                 commitmentsSection.classList.add('hidden');
             }
 
+            // Populate Selector (with user-specific status)
             selector.innerHTML = '';
             state.workflows.forEach(w => {
+                const isActive = isWorkflowActive(w.id);
                 const opt = document.createElement('option');
                 opt.value = w.id;
-                opt.text = `${w.name} ${!w.active ? '(Inactive)' : ''}`;
+                opt.text = `${w.name} ${!isActive ? '(Inactive for me)' : ''}`;
                 opt.selected = w.id === state.activeWorkflowId;
                 selector.appendChild(opt);
             });
 
-            if (activeW.active) {
+            // Set Button State based on User Profile
+            if (isWorkflowActive(activeW.id)) {
                 btnActive.classList.remove('bg-red-900/50', 'text-red-200');
                 btnActive.classList.add('bg-slate-700', 'text-white');
                 btnActive.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
-                btnActive.title = "Deactivate Workflow";
+                btnActive.title = "Deactivate Workflow (for me)";
             } else {
                 btnActive.classList.remove('bg-slate-700', 'text-white');
                 btnActive.classList.add('bg-red-900/50', 'text-red-200');
                 btnActive.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
-                btnActive.title = "Activate Workflow";
+                btnActive.title = "Activate Workflow (for me)";
             }
 
             container.innerHTML = '';
@@ -2137,7 +2240,9 @@
                     </div>
             `;
 
-            const activeWorkflows = state.workflows.filter(wf => wf.active);
+            // Always use user-specific active workflows for print too
+            const activeWorkflows = state.workflows.filter(wf => isWorkflowActive(wf.id));
+            
             activeWorkflows.forEach(wf => {
                 visited.clear(); 
                 html += `
