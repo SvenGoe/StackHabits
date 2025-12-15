@@ -29,7 +29,7 @@
 
     <style>
         /* Custom Scrollbar for dark mode */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
@@ -293,66 +293,6 @@
             align-items: center;
             gap: 6px;
         }
-
-        /* --- DIGITAL TRACKER VIEW STYLES --- */
-        .tracker-grid-container {
-            display: grid;
-            grid-template-columns: 200px repeat(31, 36px); /* Fixed habit col, flex days */
-            gap: 1px;
-            overflow-x: auto;
-            background: #1e293b; /* Grid lines color */
-            border: 1px solid #334155;
-            border-radius: 8px;
-        }
-        
-        .tracker-cell {
-            background: #0f172a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px;
-            min-height: 40px;
-        }
-        
-        .tracker-header-cell {
-            background: #1e293b;
-            color: #94a3b8;
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        
-        .tracker-habit-cell {
-            position: sticky;
-            left: 0;
-            z-index: 20;
-            background: #1e293b;
-            justify-content: flex-start;
-            padding-left: 12px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #e2e8f0;
-            border-right: 1px solid #334155;
-        }
-
-        .tracker-check-btn {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border: 2px solid #475569;
-            transition: all 0.2s;
-        }
-        .tracker-check-btn.checked {
-            background: #10b981;
-            border-color: #10b981;
-            color: white;
-        }
-        .tracker-check-btn:hover {
-            border-color: #6366f1;
-        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -368,12 +308,11 @@
         <!-- Auth Status & Controls -->
         <div class="flex items-center gap-2">
             <button onclick="window.app.switchView('run')" id="btn-run" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">Run</button>
-            <button onclick="window.app.switchView('track')" id="btn-track" class="hidden px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Track</button>
             <button onclick="window.app.switchView('edit')" id="btn-edit" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Edit</button>
             
             <div class="h-6 w-px bg-slate-700 mx-1"></div>
 
-            <button onclick="window.app.openPrintSetup()" id="btn-print" class="hidden p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Print Tracking Sheet">
+            <button onclick="window.app.openPrintSetup()" class="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Print Tracking Sheet">
                 <i data-lucide="printer" class="w-4 h-4"></i>
             </button>
             
@@ -425,27 +364,6 @@
             </div>
         </div>
 
-        <!-- TRACK VIEW (New Digital Grid) -->
-        <div id="view-track" class="hidden w-full max-w-6xl fade-in pb-20">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-4">
-                    <h2 class="text-2xl font-bold text-white flex items-center gap-2"><i data-lucide="calendar-check" class="text-indigo-400"></i> Tracker</h2>
-                    <div class="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
-                        <button onclick="window.app.changeTrackMonth(-1)" class="p-1 hover:text-indigo-400 text-slate-400"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                        <span id="track-month-label" class="mx-3 text-sm font-mono font-bold w-32 text-center">...</span>
-                        <button onclick="window.app.changeTrackMonth(1)" class="p-1 hover:text-indigo-400 text-slate-400"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-slate-800 rounded-xl border border-slate-700 p-4 overflow-hidden">
-                <div id="tracker-container" class="w-full overflow-x-auto">
-                    <!-- Grid Injected Here -->
-                </div>
-            </div>
-            <div class="mt-4 text-xs text-slate-500 text-center">Scroll horizontally to see all days. Click a circle to mark as done.</div>
-        </div>
-
         <!-- EDIT VIEW -->
         <div id="view-edit" class="hidden w-full max-w-4xl fade-in pb-20">
             <!-- Workflow Management Toolbar -->
@@ -460,7 +378,7 @@
                 <div class="flex gap-2">
                     <button onclick="window.app.createWorkflow()" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="New Workflow"><i data-lucide="plus" class="w-4 h-4"></i></button>
                     <button onclick="window.app.renameWorkflow()" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Rename"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                    <button onclick="window.app.toggleWorkflowActive()" id="btn-toggle-active" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Toggle Active for Me"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                    <button onclick="window.app.toggleWorkflowActive()" id="btn-toggle-active" class="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors" title="Toggle Active"><i data-lucide="eye" class="w-4 h-4"></i></button>
                     <button onclick="window.app.deleteWorkflow()" class="p-2 bg-red-900/50 hover:bg-red-900/80 text-red-200 border border-red-900 rounded transition-colors" title="Delete Workflow"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
             </div>
@@ -513,27 +431,27 @@
             
             <!-- TRACKING SECTION -->
             <div class="mb-8">
-                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Tracking Mode</h3>
+                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Tracking</h3>
                 <div class="space-y-2">
                     <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
                         <input type="radio" name="tracking_mode" value="disabled" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
                         <div>
                             <div class="font-semibold text-sm">Disabled</div>
-                            <div class="text-xs text-slate-500">No tracking features</div>
+                            <div class="text-xs text-slate-500">No habit tracking</div>
                         </div>
                     </label>
                     <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
                         <input type="radio" name="tracking_mode" value="online" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
                         <div>
-                            <div class="font-semibold text-sm">Digital Tracking</div>
-                            <div class="text-xs text-slate-500">Track in-app with cloud sync</div>
+                            <div class="font-semibold text-sm">Online</div>
+                            <div class="text-xs text-slate-500">Sync history to cloud</div>
                         </div>
                     </label>
                     <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
                         <input type="radio" name="tracking_mode" value="offline" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
                         <div>
-                            <div class="font-semibold text-sm">Pen & Paper</div>
-                            <div class="text-xs text-slate-500">Print layouts, track manually</div>
+                            <div class="font-semibold text-sm">Offline</div>
+                            <div class="text-xs text-slate-500">Device-only history</div>
                         </div>
                     </label>
                 </div>
@@ -741,8 +659,7 @@
 
         let state = {
             workflows: [], 
-            commitments: [],
-            trackingLog: {}, // Structure: { "YYYY-MM-DD": { "stepId": true } }
+            commitments: [], 
             activeWorkflowId: null, 
             currentStepId: "start",
             historyStack: [],
@@ -751,11 +668,9 @@
             householdName: null, 
             householdMembers: {}, 
             trackingMode: 'disabled',
-            userActiveWorkflowIds: [], // New user-specific setting
             isAuthModeLogin: true,
             isOnline: false,
-            isLoadingAuth: true,
-            trackViewDate: new Date() // State for tracker view navigation
+            isLoadingAuth: true
         };
 
         let sortableInstance = null;
@@ -767,7 +682,6 @@
             updateFavicon();
             renderAuthUI();
             updateConnectionStatus(false);
-            updateNavVisibility(); // Init nav
 
             // Populate Year Dropdown for Print Setup
             const yearSelect = document.getElementById('print-year-select');
@@ -802,7 +716,6 @@
                     state.householdId = null;
                     state.householdName = null;
                     state.householdMembers = {};
-                    state.userActiveWorkflowIds = [];
 
                     if (user) {
                         console.log("User logged in:", user.uid);
@@ -817,7 +730,6 @@
                             renderDashboard();
                             closeRun();
                             renderEditor();
-                            updateNavVisibility();
                         });
                     } else {
                         console.log("User logged out (Local Mode)");
@@ -828,7 +740,6 @@
                         renderDashboard();
                         closeRun();
                         renderEditor();
-                        updateNavVisibility();
                     }
                 });
             } catch (error) {
@@ -840,7 +751,6 @@
                 renderDashboard();
                 closeRun();
                 renderEditor();
-                updateNavVisibility();
             }
         }
 
@@ -854,26 +764,9 @@
                     const data = docSnap.data();
                     state.householdId = data.householdId || null;
                     state.trackingMode = data.trackingMode || 'disabled';
-                    state.userActiveWorkflowIds = data.activeWorkflowIds || [];
-                } else {
-                     state.userActiveWorkflowIds = [];
                 }
             } catch (e) {
                 console.error("Error loading profile", e);
-            }
-        }
-        
-        async function saveUserProfile() {
-            if (!state.user) return;
-            try {
-                const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                await setDoc(docRef, {
-                    householdId: state.householdId,
-                    trackingMode: state.trackingMode,
-                    activeWorkflowIds: state.userActiveWorkflowIds
-                }, { merge: true });
-            } catch (e) {
-                console.error("Error saving profile", e);
             }
         }
 
@@ -901,11 +794,12 @@
                     createdAt: new Date().toISOString()
                 });
 
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { householdId: newHouseholdId }, { merge: true });
+
                 state.householdId = newHouseholdId;
                 state.householdName = householdName;
                 state.householdMembers = members;
-                await saveUserProfile();
-
                 showToast("Household Created!");
                 renderSettingsUI();
                 renderAuthUI();
@@ -938,10 +832,11 @@
                 };
 
                 await setDoc(householdRef, { members: members }, { merge: true });
-                
-                state.householdId = id;
-                await saveUserProfile();
 
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { householdId: id }, { merge: true });
+
+                state.householdId = id;
                 showToast("Joined Household!");
                 
                 await loadDataFromFirestore(state.user.uid);
@@ -967,11 +862,12 @@
                     await setDoc(householdRef, { members }, { merge: true });
                 }
 
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { householdId: null }, { merge: true });
+
                 state.householdId = null;
                 state.householdName = null;
                 state.householdMembers = {};
-                await saveUserProfile();
-
                 showToast("Left Household");
 
                 saveData(); 
@@ -1035,7 +931,6 @@
                     if(data.workflows && Array.isArray(data.workflows)) {
                         state.workflows = data.workflows;
                         state.commitments = data.commitments || [];
-                        state.trackingLog = data.trackingLog || {}; // Load logs
                         showToast(state.householdId ? "Synced with Household" : "Synced with Cloud");
                     } else if (data.workflow) {
                         state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: data.workflow }];
@@ -1047,7 +942,6 @@
                 } else {
                     state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
                     state.commitments = [];
-                    state.trackingLog = {};
                     if (!state.householdId) await saveData(true); 
                 }
             } catch (error) {
@@ -1062,7 +956,6 @@
             const dataToSave = {
                 workflows: state.workflows,
                 commitments: state.commitments || [],
-                trackingLog: state.trackingLog || {},
                 updatedAt: new Date().toISOString()
             };
 
@@ -1088,37 +981,17 @@
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
                 if(!forceCloud) showToast("Saved Locally");
             }
-            // renderEditor(); // Only needed if structural change
+            renderEditor();
         }
 
         function updateTrackingSettings(mode) {
             state.trackingMode = mode;
-            // Explicitly save to profile
-            saveUserProfile();
+            if(state.user) {
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                setDoc(userRef, { trackingMode: mode }, { merge: true });
+            }
             showToast(`Tracking: ${mode}`);
             renderEditor(); 
-            updateNavVisibility();
-        }
-        
-        function updateNavVisibility() {
-            const btnPrint = document.getElementById('btn-print');
-            const btnTrack = document.getElementById('btn-track');
-            
-            // Logic:
-            // Disabled -> Hide All
-            // Online -> Show Track, Hide Print
-            // Offline -> Show Print, Hide Track
-            
-            if (state.trackingMode === 'online') {
-                btnTrack.classList.remove('hidden');
-                btnPrint.classList.add('hidden');
-            } else if (state.trackingMode === 'offline') {
-                btnTrack.classList.add('hidden');
-                btnPrint.classList.remove('hidden');
-            } else {
-                btnTrack.classList.add('hidden');
-                btnPrint.classList.add('hidden');
-            }
         }
 
         // --- COMMITMENTS LOGIC ---
@@ -1133,7 +1006,6 @@
                 assignees: [] 
             });
             saveData();
-            renderEditor();
         }
 
         function updateCommitment(index, field, value) {
@@ -1145,7 +1017,6 @@
             if(confirm("Delete this commitment?")) {
                 state.commitments.splice(index, 1);
                 saveData();
-                renderEditor();
             }
         }
 
@@ -1173,59 +1044,10 @@
                 state.activeWorkflowId = state.workflows[0].id;
             }
             if(!state.commitments) state.commitments = [];
-            if(!state.trackingLog) state.trackingLog = {};
         }
 
         function getActiveWorkflow() {
             return state.workflows.find(w => w.id === state.activeWorkflowId) || state.workflows[0];
-        }
-        
-        function isWorkflowActive(id) {
-            // Local/Guest mode fallback: check shared property
-            if (!state.user) {
-                const w = state.workflows.find(wf => wf.id === id);
-                return w ? w.active !== false : true;
-            }
-            
-            // If user has NO preferences set (new user), default to all active
-            if (!state.userActiveWorkflowIds || state.userActiveWorkflowIds.length === 0) {
-                 const w = state.workflows.find(wf => wf.id === id);
-                 // Fallback to the legacy 'active' flag to prevent everything disappearing on migration
-                 return w ? w.active !== false : true;
-            }
-            
-            return state.userActiveWorkflowIds.includes(id);
-        }
-
-        function toggleWorkflowActive() {
-            const id = state.activeWorkflowId;
-            
-            if (!state.user) {
-                // Legacy Local Toggle
-                const w = state.workflows.find(wf => wf.id === id);
-                if (w) {
-                    w.active = !w.active;
-                    saveData();
-                }
-            } else {
-                // User-Specific Profile Toggle
-                if (!state.userActiveWorkflowIds) state.userActiveWorkflowIds = [];
-                
-                const isActive = isWorkflowActive(id);
-                
-                if (isActive) {
-                    if (state.userActiveWorkflowIds.length === 0) {
-                         // Populate with all EXCEPT this one
-                         state.userActiveWorkflowIds = state.workflows.map(w => w.id).filter(wid => wid !== id);
-                    } else {
-                        state.userActiveWorkflowIds = state.userActiveWorkflowIds.filter(wid => wid !== id);
-                    }
-                } else {
-                    state.userActiveWorkflowIds.push(id);
-                }
-                saveUserProfile();
-            }
-            renderEditor();
         }
 
         function loadDataFromLocal() {
@@ -1238,7 +1060,6 @@
                     } else if(parsed.workflows) {
                         state.workflows = parsed.workflows;
                         state.commitments = parsed.commitments || [];
-                        state.trackingLog = parsed.trackingLog || {};
                     } else {
                         state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
                     }
@@ -1503,25 +1324,26 @@
             }
         }
 
+        function toggleWorkflowActive() {
+            const w = getActiveWorkflow();
+            w.active = !w.active;
+            saveData();
+        }
+
         // --- RUN VIEW LOGIC ---
         function switchView(viewName) {
             document.getElementById('view-run').classList.add('hidden');
             document.getElementById('view-edit').classList.add('hidden');
-            document.getElementById('view-track').classList.add('hidden');
             
-            ['btn-run', 'btn-edit', 'btn-track'].forEach(id => {
+            ['btn-run', 'btn-edit'].forEach(id => {
                 const btn = document.getElementById(id);
-                if(btn) {
-                    btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
-                    btn.classList.add('hover:bg-slate-700', 'text-slate-300');
-                }
+                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+                btn.classList.add('hover:bg-slate-700', 'text-slate-300');
             });
 
             const activeBtn = document.getElementById(`btn-${viewName}`);
-            if(activeBtn) {
-                activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-                activeBtn.classList.remove('hover:bg-slate-700', 'text-slate-300');
-            }
+            activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+            activeBtn.classList.remove('hover:bg-slate-700', 'text-slate-300');
 
             if (viewName === 'run') {
                 document.getElementById('view-run').classList.remove('hidden');
@@ -1530,12 +1352,9 @@
                 } else {
                     closeRun(); 
                 }
-            } else if (viewName === 'edit') {
+            } else {
                 document.getElementById('view-edit').classList.remove('hidden');
                 renderEditor();
-            } else if (viewName === 'track') {
-                document.getElementById('view-track').classList.remove('hidden');
-                renderTrackView();
             }
         }
 
@@ -1548,78 +1367,18 @@
             renderDashboard();
         }
 
-        // --- SMART SKIPPING LOGIC ---
-        function isStepRelevant(step) {
-            // 1. If not logged in or no household, everything is relevant
-            if (!state.user || !state.householdId) return true;
-            
-            // 2. If no assignees, it's for everyone
-            if (!step.assignees || step.assignees.length === 0) return true;
-            
-            // 3. Check if user is in the assignee list
-            return step.assignees.includes(state.user.uid);
-        }
-
-        function findNextRelevantStep(startStepId, w) {
-            let currId = startStepId;
-            let safety = 0;
-            
-            while(currId && safety < 100) {
-                // End conditions
-                if (currId === COMPLETED_FLOW_ID) return COMPLETED_FLOW_ID;
-                
-                const step = w.steps.find(s => s.id === currId);
-                if (!step) return currId; // Let renderer handle error
-
-                if (step.type === 'end') return currId;
-                
-                // Decisions: We can't auto-skip decisions easily because we don't know the answer.
-                // We show them regardless of assignment to avoid breaking the flow.
-                if (step.type === 'decision') return currId;
-
-                // Tasks: Check relevance
-                if (isStepRelevant(step)) return currId;
-
-                // If not relevant, auto-advance
-                currId = step.next;
-                safety++;
-            }
-            return currId;
-        }
-
         function startRun(workflowId) {
             state.activeWorkflowId = workflowId;
             state.historyStack = [];
             
             const w = getActiveWorkflow();
-            let initialId = 'start';
             const startStep = w.steps.find(s => s.id === 'start');
-            if(!startStep && w.steps.length > 0) initialId = w.steps[0].id;
-            
-            // Start at the first relevant step for this user
-            state.currentStepId = findNextRelevantStep(initialId, w);
+            state.currentStepId = startStep ? 'start' : w.steps[0].id;
 
             document.getElementById('run-dashboard').classList.add('hidden');
             document.getElementById('run-dashboard').classList.remove('grid');
             document.getElementById('run-active').classList.remove('hidden');
             document.getElementById('run-active').classList.add('flex');
-            
-            renderRunView();
-        }
-
-        function nextStep(targetId) {
-            const w = getActiveWorkflow();
-            
-            state.historyStack.push(state.currentStepId);
-
-            if (!targetId) {
-                // Try to find end
-                const endStep = w.steps.find(s => s.type === 'end');
-                state.currentStepId = endStep ? endStep.id : COMPLETED_FLOW_ID;
-            } else {
-                // Find next RELEVANT step (skipping other people's tasks)
-                state.currentStepId = findNextRelevantStep(targetId, w);
-            }
             
             renderRunView();
         }
@@ -1636,8 +1395,7 @@
             
             container.innerHTML = '';
 
-            // Filter using user-specific settings
-            const activeWorkflows = state.workflows.filter(w => isWorkflowActive(w.id));
+            const activeWorkflows = state.workflows.filter(w => w.active);
 
             if (activeWorkflows.length === 0) {
                 container.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">No active workflows.<br>Go to Edit to create or enable one.</div>';
@@ -1674,8 +1432,7 @@
                 onEnd: function (evt) {
                     const newIds = Array.from(container.children).map(el => el.getAttribute('data-id'));
                     const activeSorted = newIds.map(id => state.workflows.find(w => w.id === id));
-                    // Keep inactive ones at the bottom/end of the list in memory
-                    const inactive = state.workflows.filter(w => !newIds.includes(w.id));
+                    const inactive = state.workflows.filter(w => !w.active);
                     state.workflows = [...activeSorted, ...inactive];
                     saveData();
                 }
@@ -1707,7 +1464,6 @@
 
             let step = w.steps.find(s => s.id === state.currentStepId);
             if (!step) {
-                // Fallback if step missing
                 step = w.steps[0];
                 state.currentStepId = step.id;
             }
@@ -1760,134 +1516,34 @@
             lucide.createIcons();
         }
 
-        function restartFlow() {
-            startRun(state.activeWorkflowId);
-        }
-
-        // --- TRACKER VIEW LOGIC (NEW) ---
-        function changeTrackMonth(offset) {
-            const d = new Date(state.trackViewDate);
-            d.setMonth(d.getMonth() + offset);
-            state.trackViewDate = d;
-            renderTrackView();
-        }
-
-        function toggleTrackCheck(dateStr, stepId) {
-            // Init log if needed
-            if (!state.trackingLog) state.trackingLog = {};
-            if (!state.trackingLog[dateStr]) state.trackingLog[dateStr] = {};
-
-            // Toggle
-            if (state.trackingLog[dateStr][stepId]) {
-                delete state.trackingLog[dateStr][stepId];
-                if (Object.keys(state.trackingLog[dateStr]).length === 0) delete state.trackingLog[dateStr];
-            } else {
-                state.trackingLog[dateStr][stepId] = true;
-            }
-
-            saveData();
+        function nextStep(targetId) {
+            const w = getActiveWorkflow();
+            const targetStep = w.steps.find(s => s.id === targetId);
             
-            // Optimistic update of UI
-            const btn = document.getElementById(`check-${dateStr}-${stepId}`);
-            if(btn) {
-                btn.classList.toggle('checked');
-                btn.innerHTML = btn.classList.contains('checked') ? '<i data-lucide="check" class="w-3 h-3 mx-auto"></i>' : '';
-                lucide.createIcons();
-            }
-        }
-
-        function renderTrackView() {
-            const container = document.getElementById('tracker-container');
-            const date = state.trackViewDate;
-            const year = date.getFullYear();
-            const month = date.getMonth();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const monthName = date.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-            document.getElementById('track-month-label').innerText = monthName;
-
-            // Gather all rows to display (Active Workflows flattened + Commitments)
-            let rows = [];
-            const activeWorkflows = state.workflows.filter(w => isWorkflowActive(w.id));
-            
-            activeWorkflows.forEach(w => {
-                // Reuse topological sort from organizeSteps to get logical order
-                let visited = new Set();
-                let queue = [w.steps.find(s => s.id === 'start') ? 'start' : w.steps[0].id];
-                let wSteps = [];
-
-                while(queue.length > 0) {
-                    const id = queue.shift();
-                    if(visited.has(id)) continue;
-                    const step = w.steps.find(s => s.id === id);
-                    if(step) {
-                        visited.add(id);
-                        if (step.type !== 'end' && step.type !== 'decision') wSteps.push(step); // Only show tasks
-                        if(step.type === 'decision') {
-                            if(step.nextIfYes) queue.push(step.nextIfYes);
-                            if(step.nextIfNo) queue.push(step.nextIfNo);
-                        } else if (step.next) {
-                            queue.push(step.next);
-                        }
-                    }
-                }
-                w.steps.forEach(s => {
-                    if(!visited.has(s.id) && s.type !== 'end' && s.type !== 'decision') wSteps.push(s);
-                });
-                
-                if (wSteps.length > 0) {
-                    rows.push({ type: 'header', text: w.name });
-                    rows = rows.concat(wSteps.map(s => ({ ...s, isStep: true })));
-                }
-            });
-
-            if (state.commitments.length > 0) {
-                rows.push({ type: 'header', text: "Commitments" });
-                rows = rows.concat(state.commitments.map(c => ({ ...c, isStep: true })));
-            }
-
-            // Build Grid HTML
-            let html = `<div class="tracker-grid-container">`;
-            
-            // Header Row
-            html += `<div class="tracker-header-cell tracker-habit-cell z-30">Habit</div>`;
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dayDate = new Date(year, month, d);
-                const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'narrow' });
-                const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
-                html += `<div class="tracker-header-cell text-center ${isWeekend ? 'text-indigo-400' : ''}">${d}<br><span class="opacity-50">${dayName}</span></div>`;
-            }
-
-            // Data Rows
-            rows.forEach(row => {
-                if (row.type === 'header') {
-                    // Section Header
-                    html += `<div class="tracker-cell tracker-habit-cell !bg-slate-700/50 !text-indigo-300 font-bold uppercase text-xs !pl-2 tracking-wider" style="grid-column: 1 / -1;">${row.text}</div>`;
+            if (!targetId || !targetStep) {
+                const endStep = w.steps.find(s => s.type === 'end');
+                if (endStep) {
+                     state.historyStack.push(state.currentStepId);
+                     state.currentStepId = endStep.id;
                 } else {
-                    // Habit Row
-                    html += `<div class="tracker-cell tracker-habit-cell truncate" title="${row.text}">${row.text}</div>`;
-                    
-                    for (let d = 1; d <= daysInMonth; d++) {
-                        // ISO Date Key
-                        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                        const isChecked = state.trackingLog[dateKey] && state.trackingLog[dateKey][row.id];
-                        
-                        html += `
-                            <div class="tracker-cell">
-                                <button id="check-${dateKey}-${row.id}" 
-                                    onclick="window.app.toggleTrackCheck('${dateKey}', '${row.id}')"
-                                    class="tracker-check-btn ${isChecked ? 'checked' : ''}">
-                                    ${isChecked ? '<i data-lucide="check" class="w-3 h-3 mx-auto"></i>' : ''}
-                                </button>
-                            </div>
-                        `;
-                    }
+                    state.historyStack.push(state.currentStepId);
+                    state.currentStepId = COMPLETED_FLOW_ID;
                 }
-            });
+            } else {
+                state.historyStack.push(state.currentStepId);
+                state.currentStepId = targetId;
+            }
+            renderRunView();
+        }
 
-            html += `</div>`;
-            container.innerHTML = html;
-            lucide.createIcons();
+        function restartFlow() {
+            const w = getActiveWorkflow();
+            if(w && w.steps.length > 0) {
+                const startStep = w.steps.find(s=>s.id==='start');
+                state.currentStepId = startStep ? 'start' : w.steps[0].id;
+            }
+            state.historyStack = [];
+            renderRunView();
         }
 
         // --- EDITOR LOGIC ---
@@ -2104,28 +1760,25 @@
                 commitmentsSection.classList.add('hidden');
             }
 
-            // Populate Selector (with user-specific status)
             selector.innerHTML = '';
             state.workflows.forEach(w => {
-                const isActive = isWorkflowActive(w.id);
                 const opt = document.createElement('option');
                 opt.value = w.id;
-                opt.text = `${w.name} ${!isActive ? '(Inactive for me)' : ''}`;
+                opt.text = `${w.name} ${!w.active ? '(Inactive)' : ''}`;
                 opt.selected = w.id === state.activeWorkflowId;
                 selector.appendChild(opt);
             });
 
-            // Set Button State based on User Profile
-            if (isWorkflowActive(activeW.id)) {
+            if (activeW.active) {
                 btnActive.classList.remove('bg-red-900/50', 'text-red-200');
                 btnActive.classList.add('bg-slate-700', 'text-white');
                 btnActive.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
-                btnActive.title = "Deactivate Workflow (for me)";
+                btnActive.title = "Deactivate Workflow";
             } else {
                 btnActive.classList.remove('bg-slate-700', 'text-white');
                 btnActive.classList.add('bg-red-900/50', 'text-red-200');
                 btnActive.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
-                btnActive.title = "Activate Workflow (for me)";
+                btnActive.title = "Activate Workflow";
             }
 
             container.innerHTML = '';
@@ -2484,9 +2137,7 @@
                     </div>
             `;
 
-            // Always use user-specific active workflows for print too
-            const activeWorkflows = state.workflows.filter(wf => isWorkflowActive(wf.id));
-            
+            const activeWorkflows = state.workflows.filter(wf => wf.active);
             activeWorkflows.forEach(wf => {
                 visited.clear(); 
                 html += `
@@ -2530,8 +2181,7 @@
             addCommitment, updateCommitment, deleteCommitment,
             organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
             insertStepAfter, insertStepBefore, resetTarget, toggleAssignee, setAssignee,
-            openPrintSetup, generatePDF,
-            changeTrackMonth, toggleTrackCheck
+            openPrintSetup, generatePDF
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
