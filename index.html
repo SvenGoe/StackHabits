@@ -204,6 +204,7 @@
             color: #94a3b8;
             margin-right: 2px; /* Ensure slight spacing */
             margin-bottom: 2px;
+            flex-shrink: 0; /* Important: Prevents circles from being squished */
         }
 
         .assignee {
@@ -1993,21 +1994,28 @@
                 }
 
                 if (isFork) {
-                    // For forked habits, we want clean layout of circles in rows, just like normal ones.
-                    // We extract the inner content from our standard renderer and re-wrap it properly.
+                    // Custom rendering for fork to ensure proper wrapping and layout
+                    let innerContent = '';
+                    const uids = step.assignees;
                     
-                    let innerContent = renderAssigneeRow(step.assignees, circleCount);
-                    
-                    // If it's a single lane (standard cell-checks), we strip the container 
-                    // and use our own to ensure it doesn't try to flex:1 and fill height weirdly in a column.
-                    if(innerContent.includes('class="cell-checks"')) {
-                        innerContent = innerContent.replace('<div class="cell-checks">', '').replace('</div>', '');
-                        // Re-wrap in a container that allows wrapping but stays horizontal
-                        innerContent = `<div class="flex flex-wrap gap-1 mt-2">${innerContent}</div>`;
-                    } 
-                    // If multi-lane block, it's already structured well, just needs margin
-                    else if (innerContent.includes('class="cell-checks block"')) {
-                        innerContent = innerContent.replace('class="cell-checks block"', 'class="mt-2"');
+                    if(!uids || uids.length <= 1) {
+                         // Simple circle list - just circles in a flex wrap container
+                         innerContent = `<div class="flex flex-wrap gap-1 mt-2">${renderCircles(circleCount)}</div>`;
+                    } else {
+                        // Multi-assignee lanes
+                        innerContent = `<div class="mt-2 space-y-2">`;
+                        uids.forEach(uid => {
+                            const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
+                            innerContent += `
+                                <div class="flex items-center gap-2">
+                                    <span class="assignee lane-label">${name}</span>
+                                    <div class="flex flex-wrap gap-1">
+                                        ${renderCircles(circleCount)}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        innerContent += `</div>`;
                     }
 
                     return `
