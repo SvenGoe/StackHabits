@@ -1680,6 +1680,18 @@
             }
 
             activeWorkflows.forEach(w => {
+                // Count steps logic update:
+                // Include steps where type is "Task" 
+                // AND (Assignees is empty OR Assignees includes current user)
+                const stepCount = w.steps.filter(s => {
+                    if (s.type !== 'task') return false;
+                    // If assignees exist and user is logged in but not in list, exclude
+                    if (state.householdId && state.user && s.assignees && s.assignees.length > 0 && !s.assignees.includes(state.user.uid)) {
+                        return false;
+                    }
+                    return true;
+                }).length;
+
                 const card = document.createElement('div');
                 card.setAttribute('data-id', w.id);
                 card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group cursor-pointer select-none";
@@ -1689,7 +1701,7 @@
                         <div class="p-3 bg-indigo-500/10 rounded-lg text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                             <i data-lucide="play" class="w-6 h-6"></i>
                         </div>
-                        <span class="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded">${w.steps.length} steps</span>
+                        <span class="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded">${stepCount} steps</span>
                     </div>
                     <h3 class="text-xl font-bold text-white mb-1 pointer-events-none">${w.name}</h3>
                     <p class="text-sm text-slate-400 pointer-events-none">Tap to start routine</p>
@@ -1909,9 +1921,12 @@
             selector.innerHTML = ''; 
             state.workflows.forEach(w => { 
                 const isActive = isWorkflowActiveForUser(w.id);
+                // Updated Logic for Inactive Text:
+                const inactiveLabel = state.householdId ? '(Inactive for You)' : '(Inactive)';
+                
                 const opt = document.createElement('option'); 
                 opt.value = w.id; 
-                opt.text = `${w.name} ${!isActive ? '(Inactive for You)' : ''}`; 
+                opt.text = `${w.name} ${!isActive ? inactiveLabel : ''}`; 
                 opt.selected = w.id === state.activeWorkflowId; 
                 selector.appendChild(opt); 
             });
