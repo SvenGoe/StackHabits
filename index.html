@@ -1321,8 +1321,22 @@
             
             if (!state.trackingLog[monthKey]) state.trackingLog[monthKey] = {};
             
-            const current = state.trackingLog[monthKey][stepId] || 0;
-            state.trackingLog[monthKey][stepId] = current + 1;
+            // Default to step ID (for single assignee or household/global)
+            let keyToUpdate = stepId;
+
+            // Check if this step is multi-assigned
+            const w = getActiveWorkflow();
+            if (w) {
+                const step = w.steps.find(s => s.id === stepId);
+                // If we are in a household, the step has > 1 assignees, and the current user is one of them
+                // Then we track specifically for this user using composite key
+                if (step && step.assignees && step.assignees.length > 1 && state.user && step.assignees.includes(state.user.uid)) {
+                    keyToUpdate = `${stepId}_${state.user.uid}`;
+                }
+            }
+            
+            const current = state.trackingLog[monthKey][keyToUpdate] || 0;
+            state.trackingLog[monthKey][keyToUpdate] = current + 1;
             
             saveData(); // Auto save
             nextStep(nextId);
