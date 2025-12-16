@@ -187,7 +187,13 @@
         .mode-web .fork-column { border-right: 1px solid #334155; }
         .mode-web .fork-header { background: #0f172a; border-bottom: 1px solid #334155; color: #94a3b8; }
         .mode-web .fork-decision-title { background: #0f172a; color: #e2e8f0; }
-        .mode-web .reflection-box { display: none; } /* Hide reflection on web view */
+        
+        .mode-web .reflection-box { 
+            background: #1e293b; 
+            border: 1px solid #334155; 
+            color: #f1f5f9; 
+            margin-bottom: 1rem;
+        }
 
         /* Shared Structural Styles */
         .section-header {
@@ -273,17 +279,23 @@
 
         .reflection-container {
             display: flex;
+            flex-direction: column;
             gap: 20px;
             margin-top: 3rem;
             border-top: none; 
             padding-top: 2rem;
             page-break-inside: avoid;
         }
+        @media (min-width: 640px) {
+            .reflection-container { flex-direction: row; }
+        }
         .reflection-box {
             flex: 1;
             border-radius: 8px;
-            height: 300px;
+            min-height: 200px;
             padding: 12px;
+            display: flex;
+            flex-direction: column;
         }
         .reflection-title {
             font-weight: 800;
@@ -293,6 +305,18 @@
             display: flex;
             align-items: center;
             gap: 6px;
+        }
+        .reflection-input {
+            width: 100%;
+            flex: 1;
+            background: transparent;
+            border: none;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            color: inherit;
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -459,6 +483,18 @@
             
             <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="settings" class="text-indigo-400"></i> Settings</h2>
             
+            <!-- PROFILE SECTION -->
+            <div class="mb-8">
+                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Your Profile</h3>
+                <div>
+                    <div class="text-xs text-slate-500 uppercase font-bold mb-1">Display Name</div>
+                    <div class="flex gap-2">
+                        <input type="text" id="profile-name-input" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:border-indigo-500 outline-none" placeholder="Enter your name">
+                        <button onclick="window.app.updateProfileName()" class="px-3 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm transition-colors">Save</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- TRACKING SECTION -->
             <div class="mb-8">
                 <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Tracking Mode</h3>
@@ -698,7 +734,11 @@
             householdName: null, 
             householdMembers: {}, 
             trackingMode: 'disabled',
-            trackingLog: {}, // { "YYYY-MM": { "habitId": count } }
+            trackingLog: {}, // { "YYYY-MM": { "habitId": count, "reflections": {wins, focus} } }
+            userPrefs: {
+                displayName: "",
+                hiddenWorkflows: [] // Array of workflow IDs that are inactive for this user
+            },
             isAuthModeLogin: true,
             isOnline: false,
             isLoadingAuth: true
@@ -730,6 +770,7 @@
                     state.householdId = null;
                     state.householdName = null;
                     state.householdMembers = {};
+                    state.userPrefs = { displayName: "", hiddenWorkflows: [] };
 
                     if (user) {
                         console.log("User logged in:", user.uid);
@@ -737,10 +778,10 @@
                         updateConnectionStatus(true);
                         
                         await loadUserProfile(user.uid);
-                        renderAuthUI(); 
-
+                        
                         loadDataFromFirestore(user.uid).then(() => {
                             validateState();
+                            renderAuthUI(); // Render after data load to ensure display name is ready
                             updateTrackingUI();
                             renderDashboard();
                             closeRun();
@@ -879,6 +920,9 @@
         }
 
         async function saveData(forceCloud = false) {
+            // Prune history older than 30 months before saving
+            pruneHistory();
+
             const dataToSave = {
                 workflows: state.workflows,
                 commitments: state.commitments || [],
@@ -910,15 +954,40 @@
             }
             // If in tracker view, re-render to show updates
             if(!document.getElementById('view-track').classList.contains('hidden')) {
-                renderTrackingView();
+                // Don't full re-render if typing to avoid focus loss, but sometimes needed
+                // We handle input focus loss in the input event handler itself
             }
         }
+        
+        function pruneHistory() {
+            if (!state.trackingLog) return;
+            const now = new Date();
+            const limit = 30; // months
+            const keys = Object.keys(state.trackingLog);
+            
+            keys.forEach(key => {
+                // Key format "YYYY-MM" (Month is 0-11)
+                const parts = key.split('-');
+                if (parts.length === 2) {
+                    const year = parseInt(parts[0]);
+                    const month = parseInt(parts[1]);
+                    
+                    // Calculate months difference
+                    const diffYears = now.getFullYear() - year;
+                    const diffMonths = (diffYears * 12) + (now.getMonth() - month);
+                    
+                    if (diffMonths > limit) {
+                        delete state.trackingLog[key];
+                    }
+                }
+            });
+        }
 
-        function updateTrackingSettings(mode) {
+        async function updateTrackingSettings(mode) {
             state.trackingMode = mode;
             if(state.user) {
                 const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                setDoc(userRef, { trackingMode: mode }, { merge: true });
+                await setDoc(userRef, { trackingMode: mode }, { merge: true });
             }
             updateTrackingUI();
             showToast(`Tracking: ${mode}`);
@@ -950,10 +1019,22 @@
             }
             if(!state.commitments) state.commitments = [];
             if(!state.trackingLog) state.trackingLog = {};
+            if(!state.userPrefs) state.userPrefs = { displayName: "", hiddenWorkflows: [] };
+            if(!state.userPrefs.hiddenWorkflows) state.userPrefs.hiddenWorkflows = [];
         }
 
         function getActiveWorkflow() {
             return state.workflows.find(w => w.id === state.activeWorkflowId) || state.workflows[0];
+        }
+
+        function isWorkflowActiveForUser(workflowId) {
+            if (state.userPrefs.hiddenWorkflows && state.userPrefs.hiddenWorkflows.includes(workflowId)) {
+                return false;
+            }
+            // Fallback for legacy local mode or non-user workflows check the workflow object itself
+            // But user preference overrides it if set. 
+            // Since we default to showing, if it's not in hidden array, it's active.
+            return true;
         }
 
         function loadDataFromLocal() {
@@ -974,6 +1055,8 @@
             } else {
                 state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
             }
+            // Local mode simulates user prefs in memory for session or localStorage if extended
+            state.userPrefs = { displayName: "Local User", hiddenWorkflows: [] };
         }
 
         // --- HOUSEHOLD LOGIC ---
@@ -985,20 +1068,35 @@
                     const data = docSnap.data();
                     state.householdId = data.householdId || null;
                     state.trackingMode = data.trackingMode || 'disabled';
+                    state.userPrefs.displayName = data.displayName || "";
+                    state.userPrefs.hiddenWorkflows = data.hiddenWorkflows || [];
                 }
             } catch (e) {
                 console.error("Error loading profile", e);
             }
         }
-        // ... (Household Create/Join/Leave/Update logic remains same as provided previously, abridged for length but included in full file) ...
+        
+        async function saveUserPrefs() {
+            if (state.user) {
+                try {
+                    const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                    await setDoc(docRef, { 
+                        displayName: state.userPrefs.displayName,
+                        hiddenWorkflows: state.userPrefs.hiddenWorkflows
+                    }, { merge: true });
+                } catch (e) { console.error("Error saving user prefs", e); }
+            }
+        }
+        
         async function createHousehold() {
             if (!state.user) return;
             const newHouseholdId = Math.random().toString(36).substring(2, 8).toUpperCase();
             try {
                 const members = {};
-                const nameBase = (state.user.email || 'Admin').split('@')[0];
+                // Determine best name to use
+                const nameBase = state.userPrefs.displayName || (state.user.email || 'Admin').split('@')[0];
                 members[state.user.uid] = { email: state.user.email || 'Anonymous', name: nameBase };
-                const householdName = `The ${nameBase.charAt(0).toUpperCase() + nameBase.slice(1)}s`;
+                const householdName = `The ${nameBase.split(' ')[0]}'s Household`;
                 const householdRef = doc(db, "artifacts", appId, "public", "data", "households", newHouseholdId);
                 await setDoc(householdRef, {
                     workflows: state.workflows, commitments: state.commitments, members: members, name: householdName, createdBy: state.user.uid, createdAt: new Date().toISOString()
@@ -1016,7 +1114,8 @@
                 const householdRef = doc(db, "artifacts", appId, "public", "data", "households", id); const snap = await getDoc(householdRef);
                 if (!snap.exists()) { showToast("Household ID not found", true); return; }
                 const data = snap.data(); const members = data.members || {};
-                members[state.user.uid] = { email: state.user.email || 'Anonymous', name: (state.user.email || 'User').split('@')[0] };
+                const nameBase = state.userPrefs.displayName || (state.user.email || 'User').split('@')[0];
+                members[state.user.uid] = { email: state.user.email || 'Anonymous', name: nameBase };
                 await setDoc(householdRef, { members: members }, { merge: true });
                 const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
                 await setDoc(userRef, { householdId: id }, { merge: true });
@@ -1043,6 +1142,23 @@
         async function updateMemberName(uid, newName) {
             if(!state.householdId) return;
             try { state.householdMembers[uid].name = newName; const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId); await setDoc(householdRef, { members: state.householdMembers }, { merge: true }); renderSettingsUI(); renderEditor(); } catch(e) { console.error(e); showToast("Failed to update name", true); }
+        }
+
+        async function updateProfileName() {
+            const input = document.getElementById('profile-name-input');
+            const newName = input.value.trim();
+            if (!newName) return;
+            
+            state.userPrefs.displayName = newName;
+            await saveUserPrefs();
+            
+            // Also update household member name if applicable
+            if (state.householdId && state.user) {
+                await updateMemberName(state.user.uid, newName);
+            }
+            
+            renderAuthUI();
+            showToast("Profile Name Saved");
         }
 
         // --- COMMITMENTS & EDITING LOGIC (Standard) ---
@@ -1201,8 +1317,6 @@
         function markDoneAndNext(stepId, nextId) {
             // Log completion for current month
             const now = new Date();
-            const key = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`; // YYYY-MM based on 0-index month? JS getMonth is 0-11.
-            // Let's standardise key to YYYY-M (0-11) to match the selector values easily
             const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
             
             if (!state.trackingLog[monthKey]) state.trackingLog[monthKey] = {};
@@ -1311,12 +1425,6 @@
                     let html = `<div class="cell-checks block">`;
                     uids.forEach(uid => {
                         const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
-                        // For multi-assignee, we theoretically need separate IDs per user. 
-                        // Simplified: Using same stepId means shared tracking. 
-                        // Advanced: append uid to stepId for unique tracking. 
-                        // Given current data structure, we'll assume shared tracking for now or stick to simple ID.
-                        // To make it robust for online tracking, we'd need composite keys.
-                        // Let's use a composite key suffix for display if online.
                         const compositeId = isWebMode ? `${stepId}_${uid}` : stepId; 
                         
                         html += `
@@ -1390,7 +1498,7 @@
                 `;
             };
 
-            // Recursive Graph Traversal (Same as before)
+            // Recursive Graph Traversal
             const visited = new Set();
             const findConvergence = (startA, startB, stepsMap) => {
                 let pathA = new Set();
@@ -1462,7 +1570,9 @@
                     </div>
             `;
 
-            const activeWorkflows = state.workflows.filter(wf => wf.active);
+            // Filter active workflows based on user preference
+            const activeWorkflows = state.workflows.filter(wf => isWorkflowActiveForUser(wf.id));
+            
             activeWorkflows.forEach(wf => {
                 visited.clear();
                 const stepsMap = new Map(wf.steps.map(s => [s.id, s]));
@@ -1483,7 +1593,23 @@
                 html += `</div>`;
             }
 
-            if(!isWebMode) {
+            // Reflections Section (Both Web and Print)
+            const reflections = (state.trackingLog[trackingKey] && state.trackingLog[trackingKey].reflections) || { wins: "", focus: "" };
+            
+            if (isWebMode) {
+                html += `
+                    <div class="reflection-container">
+                        <div class="reflection-box">
+                            <div class="reflection-title text-emerald-400"><i data-lucide="trophy" class="w-4 h-4"></i> Monthly Wins</div>
+                            <textarea class="reflection-input" placeholder="What went well this month?" onchange="window.app.updateReflection('${trackingKey}', 'wins', this.value)">${reflections.wins || ''}</textarea>
+                        </div>
+                        <div class="reflection-box">
+                            <div class="reflection-title text-indigo-400"><i data-lucide="target" class="w-4 h-4"></i> Focus for Next Month</div>
+                            <textarea class="reflection-input" placeholder="What will you focus on next month?" onchange="window.app.updateReflection('${trackingKey}', 'focus', this.value)">${reflections.focus || ''}</textarea>
+                        </div>
+                    </div>
+                `;
+            } else {
                 html += `
                     <div class="reflection-container">
                         <div class="reflection-box"><div class="reflection-title"><i data-lucide="trophy" class="w-4 h-4"></i> Monthly Wins</div></div>
@@ -1495,6 +1621,14 @@
             
             html += `</div>`; // Close page
             return html;
+        }
+
+        function updateReflection(key, type, value) {
+            if(!state.trackingLog[key]) state.trackingLog[key] = {};
+            if(!state.trackingLog[key].reflections) state.trackingLog[key].reflections = {};
+            
+            state.trackingLog[key].reflections[type] = value;
+            saveData();
         }
 
         function toggleHabitCircle(key, id, value) {
@@ -1536,10 +1670,12 @@
             const container = document.getElementById('run-dashboard');
             if (sortableInstance) sortableInstance.destroy();
             container.innerHTML = '';
-            const activeWorkflows = state.workflows.filter(w => w.active);
+            
+            // Filter only active workflows for this user
+            const activeWorkflows = state.workflows.filter(w => isWorkflowActiveForUser(w.id));
 
             if (activeWorkflows.length === 0) {
-                container.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">No active workflows.<br>Go to Edit to create or enable one.</div>';
+                container.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">No active workflows.<br>Go to Edit to enable one.</div>';
                 return;
             }
 
@@ -1562,16 +1698,9 @@
             });
             lucide.createIcons();
 
-            sortableInstance = new Sortable(container, {
-                animation: 150, ghostClass: 'sortable-ghost', delay: 200, delayOnTouchOnly: true,
-                onEnd: function (evt) {
-                    const newIds = Array.from(container.children).map(el => el.getAttribute('data-id'));
-                    const activeSorted = newIds.map(id => state.workflows.find(w => w.id === id));
-                    const inactive = state.workflows.filter(w => !w.active);
-                    state.workflows = [...activeSorted, ...inactive];
-                    saveData();
-                }
-            });
+            // Only allow reordering if using local storage (for now, to avoid conflicting with user prefs logic)
+            // Or only if we are storing order in workflows array which is shared.
+            // Simplified: Drag and drop disabled for now to simplify "active/inactive" logic separation
         }
 
         // --- EDITOR RENDER & UI HELPERS ---
@@ -1583,11 +1712,18 @@
             if (state.isLoadingAuth) { statusText.innerHTML = '<span class="animate-pulse">...</span>'; userBtn.classList.remove('text-indigo-400'); return; }
 
             if (state.user) {
-                let displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
-                if (state.householdId && state.householdMembers[state.user.uid] && state.householdMembers[state.user.uid].name) {
+                // Priority: User Profile Display Name > Household Member Name > Email
+                let displayName = state.userPrefs.displayName;
+                if (!displayName && state.householdId && state.householdMembers[state.user.uid] && state.householdMembers[state.user.uid].name) {
                     displayName = state.householdMembers[state.user.uid].name;
                 }
-                statusText.innerText = displayName; userBtn.classList.add('text-indigo-400');
+                if (!displayName) {
+                    displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
+                }
+                
+                statusText.innerText = displayName; 
+                userBtn.classList.add('text-indigo-400');
+                
                 dropdown.innerHTML = `
                     <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.isAnonymous ? 'Guest User' : state.user.email}</div>
                     <button onclick="window.app.openSettingsModal()" class="w-full text-left px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700 rounded transition-colors mb-1 flex items-center gap-2"><i data-lucide="settings" class="w-3 h-3"></i> Settings</button>
@@ -1610,6 +1746,9 @@
         function renderSettingsUI() {
             const radios = document.getElementsByName('tracking_mode');
             radios.forEach(r => { r.checked = (r.value === state.trackingMode); });
+
+            // Profile Input
+            document.getElementById('profile-name-input').value = state.userPrefs.displayName || "";
 
             const noneDiv = document.getElementById('household-none'); const activeDiv = document.getElementById('household-active');
             const idDisplay = document.getElementById('current-household-id'); const listDiv = document.getElementById('household-members-list');
@@ -1668,7 +1807,27 @@
         }
         function renameWorkflow() { const w = getActiveWorkflow(); const newName = prompt("Rename workflow:", w.name); if(newName) { w.name = newName; saveData(); } }
         function deleteWorkflow() { if(state.workflows.length <= 1) { alert("You must have at least one workflow."); return; } if(confirm(`Delete "${getActiveWorkflow().name}"?`)) { state.workflows = state.workflows.filter(w => w.id !== state.activeWorkflowId); state.activeWorkflowId = state.workflows[0].id; saveData(); } }
-        function toggleWorkflowActive() { const w = getActiveWorkflow(); w.active = !w.active; saveData(); }
+        
+        async function toggleWorkflowActive() { 
+            const w = getActiveWorkflow(); 
+            // w.active on the shared object is no longer the source of truth for visibility
+            
+            // Check current status
+            const isCurrentlyActive = isWorkflowActiveForUser(w.id);
+            
+            if (isCurrentlyActive) {
+                // Make inactive -> Add to hidden list
+                if (!state.userPrefs.hiddenWorkflows.includes(w.id)) {
+                    state.userPrefs.hiddenWorkflows.push(w.id);
+                }
+            } else {
+                // Make active -> Remove from hidden list
+                state.userPrefs.hiddenWorkflows = state.userPrefs.hiddenWorkflows.filter(id => id !== w.id);
+            }
+            
+            await saveUserPrefs();
+            renderEditor(); 
+        }
         
         function organizeSteps() {
             const w = getActiveWorkflow(); if(!w.steps || w.steps.length === 0) return;
@@ -1747,8 +1906,28 @@
                 }
             } else { commitmentsSection.classList.add('hidden'); }
 
-            selector.innerHTML = ''; state.workflows.forEach(w => { const opt = document.createElement('option'); opt.value = w.id; opt.text = `${w.name} ${!w.active ? '(Inactive)' : ''}`; opt.selected = w.id === state.activeWorkflowId; selector.appendChild(opt); });
-            if (activeW.active) { btnActive.classList.remove('bg-red-900/50', 'text-red-200'); btnActive.classList.add('bg-slate-700', 'text-white'); btnActive.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>'; btnActive.title = "Deactivate Workflow"; } else { btnActive.classList.remove('bg-slate-700', 'text-white'); btnActive.classList.add('bg-red-900/50', 'text-red-200'); btnActive.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>'; btnActive.title = "Activate Workflow"; }
+            selector.innerHTML = ''; 
+            state.workflows.forEach(w => { 
+                const isActive = isWorkflowActiveForUser(w.id);
+                const opt = document.createElement('option'); 
+                opt.value = w.id; 
+                opt.text = `${w.name} ${!isActive ? '(Inactive for You)' : ''}`; 
+                opt.selected = w.id === state.activeWorkflowId; 
+                selector.appendChild(opt); 
+            });
+            
+            const isCurrentActive = isWorkflowActiveForUser(activeW.id);
+            if (isCurrentActive) { 
+                btnActive.classList.remove('bg-red-900/50', 'text-red-200'); 
+                btnActive.classList.add('bg-slate-700', 'text-white'); 
+                btnActive.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>'; 
+                btnActive.title = "Deactivate Workflow for Me"; 
+            } else { 
+                btnActive.classList.remove('bg-slate-700', 'text-white'); 
+                btnActive.classList.add('bg-red-900/50', 'text-red-200'); 
+                btnActive.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>'; 
+                btnActive.title = "Activate Workflow for Me"; 
+            }
 
             container.innerHTML = '';
             activeW.steps.forEach((step, index) => {
@@ -1791,11 +1970,11 @@
             switchEditWorkflow, createWorkflow, renameWorkflow, deleteWorkflow, toggleWorkflowActive,
             closeRun, startRun, goHome,
             openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold,
-            updateTrackingSettings, promptRenameMember, updateHouseholdName,
+            updateTrackingSettings, promptRenameMember, updateHouseholdName, updateProfileName,
             addCommitment, updateCommitment, deleteCommitment,
             organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
             insertStepAfter, insertStepBefore, resetTarget, toggleAssignee, setAssignee,
-            openPrintSetup, generatePDF, renderTrackingView, toggleHabitCircle, markDoneAndNext
+            openPrintSetup, generatePDF, renderTrackingView, toggleHabitCircle, markDoneAndNext, updateReflection
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
