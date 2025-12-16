@@ -309,10 +309,9 @@
         <!-- Auth Status & Controls -->
         <div class="flex items-center gap-2">
             <button onclick="window.app.switchView('run')" id="btn-run" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">Run</button>
+            <button onclick="window.app.switchView('track')" id="btn-track" class="hidden px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Track</button>
             <button onclick="window.app.switchView('edit')" id="btn-edit" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Edit</button>
             
-            <button onclick="window.app.switchView('track')" id="btn-track" class="hidden px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Track</button>
-
             <div class="h-6 w-px bg-slate-700 mx-1"></div>
 
             <button id="btn-print" onclick="window.app.openPrintSetup()" class="hidden p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Print Tracking Sheet">
@@ -1126,6 +1125,17 @@
 
             let step = w.steps.find(s => s.id === state.currentStepId);
             if (!step) { step = w.steps[0]; state.currentStepId = step.id; }
+
+            // Auto-skip logic: If task is assigned to someone else (and not me), skip it.
+            // Note: We only auto-skip TASKS. Decisions usually affect flow for everyone.
+            if (state.householdId && step.type === 'task' && step.assignees && step.assignees.length > 0 && !step.assignees.includes(state.user.uid)) {
+                // Determine next step ID
+                const nextId = step.next || (w.steps.find(s => s.type === 'end')?.id || COMPLETED_FLOW_ID);
+                state.currentStepId = nextId;
+                // Recursive call to handle consecutive skipped steps
+                renderRunView();
+                return;
+            }
             
             const total = w.steps.length;
             const currentIdx = state.historyStack.length;
@@ -1573,7 +1583,10 @@
             if (state.isLoadingAuth) { statusText.innerHTML = '<span class="animate-pulse">...</span>'; userBtn.classList.remove('text-indigo-400'); return; }
 
             if (state.user) {
-                const displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
+                let displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
+                if (state.householdId && state.householdMembers[state.user.uid] && state.householdMembers[state.user.uid].name) {
+                    displayName = state.householdMembers[state.user.uid].name;
+                }
                 statusText.innerText = displayName; userBtn.classList.add('text-indigo-400');
                 dropdown.innerHTML = `
                     <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.isAnonymous ? 'Guest User' : state.user.email}</div>
