@@ -117,28 +117,80 @@
             background-color: #4f46e5; /* Indigo-600 */
         }
 
-        /* --- TRACKING SHEET STYLES (Print View) --- */
+        /* --- TRACKER SHARED STYLES --- */
+        
+        /* Base Page Layout */
         .page {
+            width: 100%;
+            min-height: 100%;
+            position: relative;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        /* Print Mode Specifics */
+        .mode-print .page {
             background: white;
+            color: #0f172a;
             width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
-            padding: 10mm; /* Added margin inside page container */
-            position: relative;
-            color: #0f172a;
-            font-family: 'Inter', sans-serif !important;
-            box-sizing: border-box;
+            padding: 10mm;
         }
+        .mode-print .tracker-section { border: 2px solid #0f172a; margin-bottom: 2rem; page-break-inside: avoid; }
+        .mode-print .section-header { background: #0f172a; color: white; }
+        .mode-print .row { border-bottom: 1px solid #cbd5e1; }
+        .mode-print .cell-habit { border-right: 2px solid #0f172a; }
+        .mode-print .cell-habit.bg-alt { background-color: #f8fafc; }
+        .mode-print .lane { border-bottom: 1px solid #e2e8f0; }
+        .mode-print .circle { border: 1.5px solid #cbd5e1; color: #94a3b8; }
+        .mode-print .assignee { background: #e2e8f0; color: #475569; }
+        .mode-print .assignee.household { background: #dbeafe; color: #1e40af; }
+        .mode-print .fork-container { border-bottom: 1px solid #cbd5e1; }
+        .mode-print .fork-column { border-right: 1px solid #cbd5e1; }
+        .mode-print .fork-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; }
+        .mode-print .fork-decision-title { background: #f1f5f9; }
+        .mode-print .reflection-box { border: 2px solid #cbd5e1; color: #0f172a; }
 
-        .tracker-section {
-            margin-bottom: 2rem;
-            border: 2px solid #0f172a;
-            page-break-inside: avoid;
+        /* Web Mode Specifics (Dark) */
+        .mode-web { padding-bottom: 5rem; }
+        .mode-web .page {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: transparent;
+            color: #f1f5f9;
         }
+        .mode-web .tracker-section { 
+            border: 1px solid #334155; 
+            margin-bottom: 1.5rem; 
+            border-radius: 0.75rem; 
+            overflow: hidden;
+            background: #1e293b;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .mode-web .section-header { background: #334155; color: #f1f5f9; }
+        .mode-web .row { border-bottom: 1px solid #334155; }
+        .mode-web .cell-habit { border-right: 1px solid #334155; }
+        .mode-web .cell-habit.bg-alt { background-color: #1e293b; }
+        .mode-web .lane { border-bottom: 1px solid #334155; }
+        .mode-web .circle { 
+            border: 1.5px solid #475569; 
+            color: #64748b; 
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-web .circle:hover { border-color: #6366f1; color: #818cf8; }
+        .mode-web .circle.filled { background-color: #6366f1; border-color: #6366f1; color: white; }
+        .mode-web .assignee { background: #334155; color: #cbd5e1; }
+        .mode-web .assignee.household { background: #312e81; color: #c7d2fe; }
+        .mode-web .fork-container { border-bottom: 1px solid #334155; }
+        .mode-web .fork-column { border-right: 1px solid #334155; }
+        .mode-web .fork-header { background: #0f172a; border-bottom: 1px solid #334155; color: #94a3b8; }
+        .mode-web .fork-decision-title { background: #0f172a; color: #e2e8f0; }
+        .mode-web .reflection-box { display: none; } /* Hide reflection on web view */
 
+        /* Shared Structural Styles */
         .section-header {
-            background: #0f172a;
-            color: white;
             padding: 8px 12px;
             font-weight: 800;
             text-transform: uppercase;
@@ -146,25 +198,15 @@
             font-size: 1.1rem;
         }
 
-        .row {
-            display: flex;
-            border-bottom: 1px solid #cbd5e1;
-        }
-        .row:last-child {
-            border-bottom: none;
-        }
+        .row { display: flex; }
+        .row:last-child { border-bottom: none; }
 
         .cell-habit {
             width: 35%;
             padding: 10px;
-            border-right: 2px solid #0f172a;
             display: flex;
             flex-direction: column;
             justify-content: center;
-        }
-        
-        .cell-habit.bg-slate-50 {
-            background-color: #f8fafc;
         }
 
         .cell-checks {
@@ -172,39 +214,26 @@
             padding: 10px;
             display: flex;
             flex-wrap: wrap;
-            gap: 5px; /* Tighter gap */
+            gap: 5px;
             align-items: center;
         }
+        .cell-checks.block { display: block; padding: 0; }
         
-        /* Multi-Lane Layout */
-        .cell-checks.block {
-            display: block;
-            padding: 0;
-        }
-        .lane {
-            border-bottom: 1px solid #e2e8f0;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .lane:last-child {
-            border-bottom: none;
-        }
+        .lane { display: flex; align-items: center; gap: 8px; padding: 8px; }
+        .lane:last-child { border-bottom: none; }
 
         .circle {
-            width: 20px; 
-            height: 20px;
-            border: 1.5px solid #cbd5e1;
+            width: 24px; 
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 9px;
-            color: #94a3b8;
-            margin-right: 2px; /* Ensure slight spacing */
+            font-size: 10px;
+            margin-right: 2px;
             margin-bottom: 2px;
-            flex-shrink: 0; /* Important: Prevents circles from being squished */
+            flex-shrink: 0;
+            font-weight: 700;
         }
 
         .assignee {
@@ -212,50 +241,25 @@
             font-size: 0.6rem;
             text-transform: uppercase;
             font-weight: 700;
-            background: #e2e8f0;
-            color: #475569;
             padding: 2px 5px;
             border-radius: 3px;
             margin-top: 4px;
             align-self: flex-start;
         }
-        .assignee.lane-label {
-            width: 60px;
-            text-align: center;
-            flex-shrink: 0;
-            margin-top: 0;
-        }
-        .assignee.household {
-            background: #dbeafe;
-            color: #1e40af;
-        }
+        .assignee.lane-label { width: 60px; text-align: center; flex-shrink: 0; margin-top: 0; }
 
-        /* Fork Layout */
-        .fork-container {
-            display: flex;
-            border-bottom: 1px solid #cbd5e1;
-        }
-        .fork-column {
-            flex: 1;
-            border-right: 1px solid #cbd5e1;
-            display: flex;
-            flex-direction: column;
-        }
-        .fork-column:last-child {
-            border-right: none;
-        }
+        .fork-container { display: flex; }
+        .fork-column { flex: 1; display: flex; flex-direction: column; }
+        .fork-column:last-child { border-right: none; }
+        
         .fork-header {
-            background: #f8fafc;
             padding: 6px;
             text-align: center;
             font-size: 0.75rem;
             font-weight: 700;
-            border-bottom: 1px solid #e2e8f0;
             text-transform: uppercase;
-            color: #64748b;
         }
         .fork-decision-title {
-            background: #f1f5f9;
             padding: 8px;
             text-align: center;
             font-weight: bold;
@@ -266,8 +270,7 @@
             justify-content: center;
             gap: 8px;
         }
-        
-        /* Reflection Section */
+
         .reflection-container {
             display: flex;
             gap: 20px;
@@ -278,15 +281,13 @@
         }
         .reflection-box {
             flex: 1;
-            border: 2px solid #cbd5e1;
             border-radius: 8px;
-            height: 300px; /* Increased height */
+            height: 300px;
             padding: 12px;
         }
         .reflection-title {
             font-weight: 800;
             text-transform: uppercase;
-            color: #0f172a;
             font-size: 0.9rem;
             margin-bottom: 8px;
             display: flex;
@@ -310,9 +311,11 @@
             <button onclick="window.app.switchView('run')" id="btn-run" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">Run</button>
             <button onclick="window.app.switchView('edit')" id="btn-edit" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Edit</button>
             
+            <button onclick="window.app.switchView('track')" id="btn-track" class="hidden px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-slate-700 text-slate-300">Track</button>
+
             <div class="h-6 w-px bg-slate-700 mx-1"></div>
 
-            <button onclick="window.app.openPrintSetup()" class="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Print Tracking Sheet">
+            <button id="btn-print" onclick="window.app.openPrintSetup()" class="hidden p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Print Tracking Sheet">
                 <i data-lucide="printer" class="w-4 h-4"></i>
             </button>
             
@@ -420,6 +423,34 @@
             <div class="h-10"></div>
         </div>
 
+        <!-- TRACK VIEW (New) -->
+        <div id="view-track" class="hidden w-full fade-in pb-20 flex flex-col items-center">
+            
+            <!-- Controls -->
+            <div class="w-full max-w-[1000px] mb-8 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex gap-4 items-center w-full md:w-auto">
+                     <select id="track-month" onchange="window.app.renderTrackingView()" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:border-indigo-500 outline-none flex-1 md:w-40">
+                        <!-- Populated by JS -->
+                    </select>
+                    <select id="track-year" onchange="window.app.renderTrackingView()" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:border-indigo-500 outline-none w-24">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                
+                <div class="flex gap-4 items-center w-full md:w-auto">
+                    <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded p-2 w-full md:w-auto">
+                        <label class="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Days Off:</label>
+                        <input type="number" id="track-skip" value="0" min="0" max="15" onchange="window.app.renderTrackingView()" class="bg-transparent w-16 text-sm text-white focus:outline-none text-right">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Container -->
+            <div id="track-content" class="w-full flex justify-center mode-web">
+                <!-- Rendered Grid Goes Here -->
+            </div>
+        </div>
+
     </main>
 
     <!-- SETTINGS MODAL -->
@@ -431,27 +462,27 @@
             
             <!-- TRACKING SECTION -->
             <div class="mb-8">
-                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Tracking</h3>
+                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Tracking Mode</h3>
                 <div class="space-y-2">
                     <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
                         <input type="radio" name="tracking_mode" value="disabled" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
                         <div>
                             <div class="font-semibold text-sm">Disabled</div>
-                            <div class="text-xs text-slate-500">No habit tracking</div>
+                            <div class="text-xs text-slate-500">No habit tracking features.</div>
                         </div>
                     </label>
                     <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
                         <input type="radio" name="tracking_mode" value="online" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
                         <div>
                             <div class="font-semibold text-sm">Online</div>
-                            <div class="text-xs text-slate-500">Sync history to cloud</div>
+                            <div class="text-xs text-slate-500">Track history within the app.</div>
                         </div>
                     </label>
                     <label class="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg cursor-pointer border border-transparent hover:border-slate-600">
                         <input type="radio" name="tracking_mode" value="offline" onchange="window.app.updateTrackingSettings(this.value)" class="accent-indigo-500 w-4 h-4">
                         <div>
                             <div class="font-semibold text-sm">Offline</div>
-                            <div class="text-xs text-slate-500">Device-only history</div>
+                            <div class="text-xs text-slate-500">Use pen and paper with a printed layout.</div>
                         </div>
                     </label>
                 </div>
@@ -544,7 +575,7 @@
                 </div>
                 <div>
                     <label class="block text-xs uppercase font-bold text-slate-500 mb-1 flex items-center gap-1">
-                        Skip Days 
+                        Days Off
                         <div class="group relative inline-block">
                             <i data-lucide="info" class="w-3 h-3 text-indigo-400 cursor-help"></i>
                             <div class="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-48 bg-black text-white text-xs rounded p-2 hidden group-hover:block z-50 pointer-events-none shadow-xl border border-slate-700">
@@ -613,7 +644,7 @@
     <div id="toast">Saved to Cloud</div>
 
     <!-- PRINT VIEW (Replaced dynamic content with container) -->
-    <div id="print-view" class="print-only">
+    <div id="print-view" class="print-only mode-print">
         <!-- Content injected by exportPDF -->
     </div>
 
@@ -668,6 +699,7 @@
             householdName: null, 
             householdMembers: {}, 
             trackingMode: 'disabled',
+            trackingLog: {}, // { "YYYY-MM": { "habitId": count } }
             isAuthModeLogin: true,
             isOnline: false,
             isLoadingAuth: true
@@ -682,24 +714,7 @@
             updateFavicon();
             renderAuthUI();
             updateConnectionStatus(false);
-
-            // Populate Year Dropdown for Print Setup
-            const yearSelect = document.getElementById('print-year-select');
-            if(yearSelect) {
-                const currentYear = new Date().getFullYear();
-                for(let i=0; i<5; i++) {
-                    const opt = document.createElement('option');
-                    opt.value = currentYear + i;
-                    opt.text = currentYear + i;
-                    yearSelect.appendChild(opt);
-                }
-            }
-            
-            // Set Default Month
-            const monthSelect = document.getElementById('print-month-select');
-            if(monthSelect) {
-                monthSelect.value = new Date().getMonth();
-            }
+            initTrackingSelectors();
 
             try {
                 app = initializeApp(firebaseConfig);
@@ -727,6 +742,7 @@
 
                         loadDataFromFirestore(user.uid).then(() => {
                             validateState();
+                            updateTrackingUI();
                             renderDashboard();
                             closeRun();
                             renderEditor();
@@ -737,6 +753,7 @@
                         renderAuthUI();
                         loadDataFromLocal();
                         validateState();
+                        updateTrackingUI();
                         renderDashboard();
                         closeRun();
                         renderEditor();
@@ -748,163 +765,69 @@
                 showToast("Offline Mode (Firebase Init Failed)", true);
                 loadDataFromLocal();
                 validateState();
+                updateTrackingUI();
                 renderDashboard();
                 closeRun();
                 renderEditor();
             }
         }
 
-        // --- HOUSEHOLD LOGIC ---
+        function initTrackingSelectors() {
+            // Populate Year Dropdown for Print & Web Setup
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth();
 
-        async function loadUserProfile(uid) {
-            try {
-                const docRef = doc(db, "artifacts", appId, "users", uid, "data", "profile");
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    state.householdId = data.householdId || null;
-                    state.trackingMode = data.trackingMode || 'disabled';
+            ['print-year-select', 'track-year'].forEach(id => {
+                const yearSelect = document.getElementById(id);
+                if(yearSelect) {
+                    yearSelect.innerHTML = '';
+                    for(let i=-1; i<5; i++) {
+                        const opt = document.createElement('option');
+                        opt.value = currentYear + i;
+                        opt.text = currentYear + i;
+                        if(i===0) opt.selected = true;
+                        yearSelect.appendChild(opt);
+                    }
                 }
-            } catch (e) {
-                console.error("Error loading profile", e);
-            }
+            });
+
+            // Set Default Month
+            ['print-month-select', 'track-month'].forEach(id => {
+                const monthSelect = document.getElementById(id);
+                if(monthSelect) {
+                    // Populate if empty (for track-month which isn't hardcoded)
+                    if(monthSelect.options.length === 0) {
+                         const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                         months.forEach((m, i) => {
+                             const opt = document.createElement('option');
+                             opt.value = i;
+                             opt.text = m;
+                             monthSelect.appendChild(opt);
+                         });
+                    }
+                    monthSelect.value = currentMonth;
+                }
+            });
         }
 
-        async function createHousehold() {
-            if (!state.user) return;
-            const newHouseholdId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        function updateTrackingUI() {
+            const trackBtn = document.getElementById('btn-track');
+            const printBtn = document.getElementById('btn-print');
             
-            try {
-                const members = {};
-                const nameBase = (state.user.email || 'Admin').split('@')[0];
-                members[state.user.uid] = { 
-                    email: state.user.email || 'Anonymous', 
-                    name: nameBase 
-                };
-
-                const householdName = `The ${nameBase.charAt(0).toUpperCase() + nameBase.slice(1)}s`;
-
-                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", newHouseholdId);
-                await setDoc(householdRef, {
-                    workflows: state.workflows,
-                    commitments: state.commitments || [],
-                    members: members,
-                    name: householdName, 
-                    createdBy: state.user.uid,
-                    createdAt: new Date().toISOString()
-                });
-
-                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                await setDoc(userRef, { householdId: newHouseholdId }, { merge: true });
-
-                state.householdId = newHouseholdId;
-                state.householdName = householdName;
-                state.householdMembers = members;
-                showToast("Household Created!");
-                renderSettingsUI();
-                renderAuthUI();
-            } catch (e) {
-                console.error("Create household failed", e);
-                showToast("Error creating household", true);
+            if (state.trackingMode === 'online') {
+                trackBtn.classList.remove('hidden');
+                printBtn.classList.add('hidden');
+            } else if (state.trackingMode === 'offline') {
+                trackBtn.classList.add('hidden');
+                printBtn.classList.remove('hidden');
+            } else {
+                trackBtn.classList.add('hidden');
+                printBtn.classList.add('hidden');
             }
-        }
 
-        async function joinHousehold() {
-            const input = document.getElementById('join-household-id');
-            const id = input.value.trim().toUpperCase();
-            if (!id || !state.user) return;
-
-            try {
-                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", id);
-                const snap = await getDoc(householdRef);
-                
-                if (!snap.exists()) {
-                    showToast("Household ID not found", true);
-                    return;
-                }
-
-                // Add self to members
-                const data = snap.data();
-                const members = data.members || {};
-                members[state.user.uid] = { 
-                    email: state.user.email || 'Anonymous', 
-                    name: (state.user.email || 'User').split('@')[0] 
-                };
-
-                await setDoc(householdRef, { members: members }, { merge: true });
-
-                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                await setDoc(userRef, { householdId: id }, { merge: true });
-
-                state.householdId = id;
-                showToast("Joined Household!");
-                
-                await loadDataFromFirestore(state.user.uid);
-                validateState();
-                renderDashboard();
-                renderEditor();
-                renderSettingsUI();
-            } catch (e) {
-                console.error("Join failed", e);
-                showToast("Error joining household", true);
-            }
-        }
-
-        async function leaveHousehold() {
-            if (!state.user || !state.householdId) return;
-            
-            try {
-                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
-                const snap = await getDoc(householdRef);
-                if(snap.exists()) {
-                    const members = snap.data().members || {};
-                    delete members[state.user.uid];
-                    await setDoc(householdRef, { members }, { merge: true });
-                }
-
-                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                await setDoc(userRef, { householdId: null }, { merge: true });
-
-                state.householdId = null;
-                state.householdName = null;
-                state.householdMembers = {};
-                showToast("Left Household");
-
-                saveData(); 
-                renderSettingsUI();
-            } catch (e) {
-                console.error("Leave failed", e);
-                showToast("Error leaving household", true);
-            }
-        }
-
-        async function updateMemberName(uid, newName) {
-            if(!state.householdId) return;
-            try {
-                state.householdMembers[uid].name = newName;
-                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
-                await setDoc(householdRef, { members: state.householdMembers }, { merge: true });
-                renderSettingsUI(); 
-                renderEditor(); 
-            } catch(e) {
-                console.error(e);
-                showToast("Failed to update name", true);
-            }
-        }
-
-        async function updateHouseholdName() {
-            const input = document.getElementById('household-name-input');
-            const newName = input.value.trim();
-            if(!newName || !state.householdId) return;
-
-            try {
-                state.householdName = newName;
-                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
-                await setDoc(householdRef, { name: newName }, { merge: true });
-                showToast("Household Name Saved");
-            } catch(e) {
-                console.error(e);
-                showToast("Failed to save name", true);
+            // If we were on tracking page but mode changed, go home
+            if (state.trackingMode !== 'online' && !document.getElementById('view-track').classList.contains('hidden')) {
+                goHome();
             }
         }
 
@@ -931,6 +854,7 @@
                     if(data.workflows && Array.isArray(data.workflows)) {
                         state.workflows = data.workflows;
                         state.commitments = data.commitments || [];
+                        state.trackingLog = data.trackingLog || {};
                         showToast(state.householdId ? "Synced with Household" : "Synced with Cloud");
                     } else if (data.workflow) {
                         state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: data.workflow }];
@@ -938,10 +862,12 @@
                     } else {
                          state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
                          state.commitments = [];
+                         state.trackingLog = {};
                     }
                 } else {
                     state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
                     state.commitments = [];
+                    state.trackingLog = {};
                     if (!state.householdId) await saveData(true); 
                 }
             } catch (error) {
@@ -949,6 +875,7 @@
                 showToast("Sync Error", true);
                 state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
                 state.commitments = [];
+                state.trackingLog = {};
             }
         }
 
@@ -956,6 +883,7 @@
             const dataToSave = {
                 workflows: state.workflows,
                 commitments: state.commitments || [],
+                trackingLog: state.trackingLog || {},
                 updatedAt: new Date().toISOString()
             };
 
@@ -981,7 +909,10 @@
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
                 if(!forceCloud) showToast("Saved Locally");
             }
-            renderEditor();
+            // If in tracker view, re-render to show updates
+            if(!document.getElementById('view-track').classList.contains('hidden')) {
+                renderTrackingView();
+            }
         }
 
         function updateTrackingSettings(mode) {
@@ -990,34 +921,9 @@
                 const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
                 setDoc(userRef, { trackingMode: mode }, { merge: true });
             }
+            updateTrackingUI();
             showToast(`Tracking: ${mode}`);
             renderEditor(); 
-        }
-
-        // --- COMMITMENTS LOGIC ---
-        function addCommitment() {
-            const newId = "commitment-" + Math.floor(Math.random() * 10000);
-            if(!state.commitments) state.commitments = [];
-            state.commitments.push({ 
-                id: newId, 
-                text: "New Commitment", 
-                targetCount: 1, 
-                targetPeriod: "day",
-                assignees: [] 
-            });
-            saveData();
-        }
-
-        function updateCommitment(index, field, value) {
-            state.commitments[index][field] = value;
-            saveData();
-        }
-
-        function deleteCommitment(index) {
-            if(confirm("Delete this commitment?")) {
-                state.commitments.splice(index, 1);
-                saveData();
-            }
         }
 
         // --- FAVICON & UTILS ---
@@ -1044,6 +950,7 @@
                 state.activeWorkflowId = state.workflows[0].id;
             }
             if(!state.commitments) state.commitments = [];
+            if(!state.trackingLog) state.trackingLog = {};
         }
 
         function getActiveWorkflow() {
@@ -1060,6 +967,7 @@
                     } else if(parsed.workflows) {
                         state.workflows = parsed.workflows;
                         state.commitments = parsed.commitments || [];
+                        state.trackingLog = parsed.trackingLog || {};
                     } else {
                         state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
                     }
@@ -1069,289 +977,106 @@
             }
         }
 
-        function showToast(msg, isError = false) {
-            const el = document.getElementById("toast");
-            el.innerText = msg;
-            el.style.backgroundColor = isError ? "#dc2626" : "#10b981";
-            el.className = "show";
-            setTimeout(() => { el.className = el.className.replace("show", ""); }, 3000);
-        }
-
-        function updateConnectionStatus(isOnline) {
-            state.isOnline = isOnline;
-            const el = document.getElementById('connection-status');
-            if(el) {
-                el.className = `w-2 h-2 rounded-full ml-2 ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`;
-                el.title = isOnline ? "Connected to Cloud" : "Offline / Error";
-            }
-        }
-
-        // --- UI RENDERING ---
-        function renderAuthUI() {
-            const statusText = document.getElementById('user-status-text');
-            const dropdown = document.getElementById('auth-dropdown-content');
-            const userBtn = document.getElementById('user-btn');
-
-            if (!statusText || !dropdown || !userBtn) return;
-
-            if (state.isLoadingAuth) {
-                statusText.innerHTML = '<span class="animate-pulse">...</span>';
-                userBtn.classList.remove('text-indigo-400');
-                return;
-            }
-
-            if (state.user) {
-                const displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
-                statusText.innerText = displayName;
-                userBtn.classList.add('text-indigo-400');
-                
-                dropdown.innerHTML = `
-                    <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.isAnonymous ? 'Guest User' : state.user.email}</div>
-                    
-                    <button onclick="window.app.openSettingsModal()" class="w-full text-left px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700 rounded transition-colors mb-1 flex items-center gap-2">
-                        <i data-lucide="settings" class="w-3 h-3"></i> Settings
-                    </button>
-                    
-                    <button onclick="window.app.doLogout()" class="w-full text-left px-2 py-1.5 text-sm text-red-400 hover:bg-slate-700 rounded transition-colors">
-                        Sign Out
-                    </button>
-                `;
-            } else {
-                statusText.innerText = "Local";
-                userBtn.classList.remove('text-indigo-400');
-                dropdown.innerHTML = `
-                    <div class="text-xs text-slate-500 mb-2 px-2">Sync across devices</div>
-                    <button onclick="window.app.openAuthModal()" class="w-full text-left px-2 py-1.5 text-sm text-indigo-400 hover:bg-slate-700 rounded transition-colors">
-                        Sign In / Register
-                    </button>
-                `;
-            }
-            lucide.createIcons();
-        }
-
-        function openSettingsModal() {
-            document.getElementById('settings-modal').classList.remove('hidden');
-            renderSettingsUI();
-        }
-
-        function closeSettingsModal() {
-            document.getElementById('settings-modal').classList.add('hidden');
-        }
-
-        function renderSettingsUI() {
-            const radios = document.getElementsByName('tracking_mode');
-            radios.forEach(r => {
-                r.checked = (r.value === state.trackingMode);
-            });
-
-            const noneDiv = document.getElementById('household-none');
-            const activeDiv = document.getElementById('household-active');
-            const idDisplay = document.getElementById('current-household-id');
-            const listDiv = document.getElementById('household-members-list');
-            const nameInput = document.getElementById('household-name-input');
-
-            if (state.householdId) {
-                noneDiv.classList.add('hidden');
-                activeDiv.classList.remove('hidden');
-                idDisplay.innerText = state.householdId;
-                nameInput.value = state.householdName || '';
-
-                listDiv.innerHTML = '';
-                Object.keys(state.householdMembers).forEach(uid => {
-                    const member = state.householdMembers[uid];
-                    const row = document.createElement('div');
-                    row.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-700";
-                    row.innerHTML = `
-                        <div class="truncate">
-                            <div class="font-bold text-sm text-white">${member.name}</div>
-                            <div class="text-xs text-slate-500 truncate w-32">${member.email}</div>
-                        </div>
-                        <button onclick="window.app.promptRenameMember('${uid}', '${member.name}')" class="p-1 text-slate-400 hover:text-white" title="Edit Name">
-                            <i data-lucide="edit-2" class="w-3 h-3"></i>
-                        </button>
-                    `;
-                    listDiv.appendChild(row);
-                });
-                lucide.createIcons();
-
-            } else {
-                noneDiv.classList.remove('hidden');
-                activeDiv.classList.add('hidden');
-            }
-        }
-
-        function promptRenameMember(uid, currentName) {
-            const newName = prompt("Enter display name:", currentName);
-            if(newName && newName.trim() !== "") {
-                updateMemberName(uid, newName.trim());
-            }
-        }
-
-        // --- AUTH MODAL ---
-        function openAuthModal() {
-            document.getElementById('auth-modal').classList.remove('hidden');
-            document.getElementById('auth-email').focus();
-        }
-
-        function closeAuthModal() {
-            document.getElementById('auth-modal').classList.add('hidden');
-            document.getElementById('auth-error').classList.add('hidden');
-        }
-
-        function toggleAuthMode() {
-            state.isAuthModeLogin = !state.isAuthModeLogin;
-            const title = document.getElementById('auth-title');
-            const btn = document.getElementById('auth-submit-btn');
-            const toggleText = document.getElementById('auth-toggle-text');
-            const toggleBtn = document.getElementById('auth-toggle-btn');
-
-            if(state.isAuthModeLogin) {
-                title.innerText = "Sign In";
-                btn.innerText = "Sign In";
-                toggleText.innerText = "Don't have an account?";
-                toggleBtn.innerText = "Sign Up";
-            } else {
-                title.innerText = "Create Account";
-                btn.innerText = "Create Account";
-                toggleText.innerText = "Already have an account?";
-                toggleBtn.innerText = "Sign In";
-            }
-        }
-
-        async function handleAuthSubmit(e) {
-            e.preventDefault();
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            const errorBox = document.getElementById('auth-error');
-            const submitBtn = document.getElementById('auth-submit-btn');
-            
-            errorBox.classList.add('hidden');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<div class="loader mx-auto"></div>';
-
-            const attemptAuth = async (retries = 1) => {
-                try {
-                    if (state.isAuthModeLogin) {
-                        await signInWithEmailAndPassword(auth, email, password);
-                    } else {
-                        await createUserWithEmailAndPassword(auth, email, password);
-                    }
-                } catch (error) {
-                    if (retries > 0 && error.code === 'auth/network-request-failed') {
-                        console.warn("Auth network error, retrying...", error);
-                        await new Promise(r => setTimeout(r, 500)); 
-                        await attemptAuth(retries - 1);
-                    } else {
-                        throw error;
-                    }
+        // --- HOUSEHOLD LOGIC ---
+        async function loadUserProfile(uid) {
+            try {
+                const docRef = doc(db, "artifacts", appId, "users", uid, "data", "profile");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    state.householdId = data.householdId || null;
+                    state.trackingMode = data.trackingMode || 'disabled';
                 }
-            };
-
-            try {
-                await attemptAuth();
-                closeAuthModal();
-            } catch (error) {
-                console.error("Auth Error:", error);
-                const msg = error.code ? error.code.replace('auth/', '').replace(/-/g, ' ') : error.message;
-                errorBox.innerText = msg;
-                errorBox.classList.remove('hidden');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerText = state.isAuthModeLogin ? "Sign In" : "Create Account";
+            } catch (e) {
+                console.error("Error loading profile", e);
             }
         }
-
-        async function handleGuestLogin() {
-             const errorBox = document.getElementById('auth-error');
-             try {
-                await signInAnonymously(auth);
-                closeAuthModal();
-             } catch (error) {
-                console.error("Guest Auth Error:", error);
-                errorBox.innerText = "Guest login failed: " + error.message;
-                errorBox.classList.remove('hidden');
-             }
-        }
-
-        async function doLogout() {
+        // ... (Household Create/Join/Leave/Update logic remains same as provided previously, abridged for length but included in full file) ...
+        async function createHousehold() {
+            if (!state.user) return;
+            const newHouseholdId = Math.random().toString(36).substring(2, 8).toUpperCase();
             try {
-                await signOut(auth);
-            } catch (error) {
-                console.error("Logout failed", error);
-            }
-        }
-
-        // --- WORKFLOW MANAGEMENT ---
-        
-        function switchEditWorkflow(id) {
-            state.activeWorkflowId = id;
-            renderEditor();
-        }
-
-        function createWorkflow() {
-            const name = prompt("Name for new workflow:", "Evening Routine");
-            if(name) {
-                const newId = "workflow-" + Date.now();
-                state.workflows.push({
-                    id: newId,
-                    name: name,
-                    active: true,
-                    steps: JSON.parse(JSON.stringify(DEFAULT_WORKFLOW_STEPS))
+                const members = {};
+                const nameBase = (state.user.email || 'Admin').split('@')[0];
+                members[state.user.uid] = { email: state.user.email || 'Anonymous', name: nameBase };
+                const householdName = `The ${nameBase.charAt(0).toUpperCase() + nameBase.slice(1)}s`;
+                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", newHouseholdId);
+                await setDoc(householdRef, {
+                    workflows: state.workflows, commitments: state.commitments, members: members, name: householdName, createdBy: state.user.uid, createdAt: new Date().toISOString()
                 });
-                state.activeWorkflowId = newId;
-                saveData();
-            }
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { householdId: newHouseholdId }, { merge: true });
+                state.householdId = newHouseholdId; state.householdName = householdName; state.householdMembers = members;
+                showToast("Household Created!"); renderSettingsUI(); renderAuthUI();
+            } catch (e) { console.error(e); showToast("Error creating household", true); }
         }
 
-        function renameWorkflow() {
-            const w = getActiveWorkflow();
-            const newName = prompt("Rename workflow:", w.name);
-            if(newName) {
-                w.name = newName;
-                saveData();
-            }
+        async function joinHousehold() {
+            const input = document.getElementById('join-household-id'); const id = input.value.trim().toUpperCase(); if (!id || !state.user) return;
+            try {
+                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", id); const snap = await getDoc(householdRef);
+                if (!snap.exists()) { showToast("Household ID not found", true); return; }
+                const data = snap.data(); const members = data.members || {};
+                members[state.user.uid] = { email: state.user.email || 'Anonymous', name: (state.user.email || 'User').split('@')[0] };
+                await setDoc(householdRef, { members: members }, { merge: true });
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
+                await setDoc(userRef, { householdId: id }, { merge: true });
+                state.householdId = id; showToast("Joined Household!");
+                await loadDataFromFirestore(state.user.uid); validateState(); updateTrackingUI(); renderDashboard(); renderEditor(); renderSettingsUI();
+            } catch (e) { console.error(e); showToast("Error joining household", true); }
         }
 
-        function deleteWorkflow() {
-            if(state.workflows.length <= 1) {
-                alert("You must have at least one workflow.");
-                return;
-            }
-            if(confirm(`Delete "${getActiveWorkflow().name}"?`)) {
-                state.workflows = state.workflows.filter(w => w.id !== state.activeWorkflowId);
-                state.activeWorkflowId = state.workflows[0].id;
-                saveData();
-            }
+        async function leaveHousehold() {
+            if (!state.user || !state.householdId) return;
+            try {
+                const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId); const snap = await getDoc(householdRef);
+                if(snap.exists()) { const members = snap.data().members || {}; delete members[state.user.uid]; await setDoc(householdRef, { members }, { merge: true }); }
+                const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile"); await setDoc(userRef, { householdId: null }, { merge: true });
+                state.householdId = null; state.householdName = null; state.householdMembers = {}; showToast("Left Household"); saveData(); renderSettingsUI();
+            } catch (e) { console.error(e); showToast("Error leaving household", true); }
         }
 
-        function toggleWorkflowActive() {
-            const w = getActiveWorkflow();
-            w.active = !w.active;
-            saveData();
+        async function updateHouseholdName() {
+             const input = document.getElementById('household-name-input'); const newName = input.value.trim(); if(!newName || !state.householdId) return;
+             try { state.householdName = newName; const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId); await setDoc(householdRef, { name: newName }, { merge: true }); showToast("Household Name Saved"); } catch(e) { console.error(e); showToast("Failed to save name", true); }
         }
+        
+        async function updateMemberName(uid, newName) {
+            if(!state.householdId) return;
+            try { state.householdMembers[uid].name = newName; const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId); await setDoc(householdRef, { members: state.householdMembers }, { merge: true }); renderSettingsUI(); renderEditor(); } catch(e) { console.error(e); showToast("Failed to update name", true); }
+        }
+
+        // --- COMMITMENTS & EDITING LOGIC (Standard) ---
+        function addCommitment() {
+            const newId = "commitment-" + Math.floor(Math.random() * 10000); if(!state.commitments) state.commitments = [];
+            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignees: [] }); saveData();
+        }
+        function updateCommitment(index, field, value) { state.commitments[index][field] = value; saveData(); }
+        function deleteCommitment(index) { if(confirm("Delete this commitment?")) { state.commitments.splice(index, 1); saveData(); } }
 
         // --- RUN VIEW LOGIC ---
         function switchView(viewName) {
-            document.getElementById('view-run').classList.add('hidden');
-            document.getElementById('view-edit').classList.add('hidden');
-            
-            ['btn-run', 'btn-edit'].forEach(id => {
+            ['view-run', 'view-edit', 'view-track'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['btn-run', 'btn-edit', 'btn-track'].forEach(id => {
                 const btn = document.getElementById(id);
-                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
-                btn.classList.add('hover:bg-slate-700', 'text-slate-300');
+                if(btn) {
+                    btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+                    btn.classList.add('hover:bg-slate-700', 'text-slate-300');
+                }
             });
 
             const activeBtn = document.getElementById(`btn-${viewName}`);
-            activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-            activeBtn.classList.remove('hover:bg-slate-700', 'text-slate-300');
+            if(activeBtn) {
+                activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+                activeBtn.classList.remove('hover:bg-slate-700', 'text-slate-300');
+            }
 
             if (viewName === 'run') {
                 document.getElementById('view-run').classList.remove('hidden');
-                if (state.activeWorkflowId && document.getElementById('run-active').classList.contains('flex')) {
-                    // Keep running
-                } else {
-                    closeRun(); 
-                }
+                if (state.activeWorkflowId && document.getElementById('run-active').classList.contains('flex')) { /* Keep running */ } else { closeRun(); }
+            } else if (viewName === 'track') {
+                document.getElementById('view-track').classList.remove('hidden');
+                renderTrackingView();
             } else {
                 document.getElementById('view-edit').classList.remove('hidden');
                 renderEditor();
@@ -1363,14 +1088,11 @@
             document.getElementById('run-dashboard').classList.add('grid');
             document.getElementById('run-active').classList.add('hidden');
             document.getElementById('run-active').classList.remove('flex');
-            state.activeWorkflowId = null; 
-            renderDashboard();
+            state.activeWorkflowId = null; renderDashboard();
         }
 
         function startRun(workflowId) {
-            state.activeWorkflowId = workflowId;
-            state.historyStack = [];
-            
+            state.activeWorkflowId = workflowId; state.historyStack = [];
             const w = getActiveWorkflow();
             const startStep = w.steps.find(s => s.id === 'start');
             state.currentStepId = startStep ? 'start' : w.steps[0].id;
@@ -1379,65 +1101,10 @@
             document.getElementById('run-dashboard').classList.remove('grid');
             document.getElementById('run-active').classList.remove('hidden');
             document.getElementById('run-active').classList.add('flex');
-            
             renderRunView();
         }
 
-        function goHome() {
-            switchView('run');
-            closeRun();
-        }
-
-        function renderDashboard() {
-            const container = document.getElementById('run-dashboard');
-            
-            if (sortableInstance) sortableInstance.destroy();
-            
-            container.innerHTML = '';
-
-            const activeWorkflows = state.workflows.filter(w => w.active);
-
-            if (activeWorkflows.length === 0) {
-                container.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">No active workflows.<br>Go to Edit to create or enable one.</div>';
-                return;
-            }
-
-            activeWorkflows.forEach(w => {
-                const card = document.createElement('div');
-                card.setAttribute('data-id', w.id);
-                card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group cursor-pointer select-none";
-                card.onclick = (e) => {
-                    if(card.classList.contains('sortable-drag')) return;
-                    startRun(w.id);
-                };
-                card.innerHTML = `
-                    <div class="flex items-start justify-between mb-4 pointer-events-none">
-                        <div class="p-3 bg-indigo-500/10 rounded-lg text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                            <i data-lucide="play" class="w-6 h-6"></i>
-                        </div>
-                        <span class="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded">${w.steps.length} steps</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-1 pointer-events-none">${w.name}</h3>
-                    <p class="text-sm text-slate-400 pointer-events-none">Tap to start routine</p>
-                `;
-                container.appendChild(card);
-            });
-            lucide.createIcons();
-
-            sortableInstance = new Sortable(container, {
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                delay: 200, 
-                delayOnTouchOnly: true,
-                onEnd: function (evt) {
-                    const newIds = Array.from(container.children).map(el => el.getAttribute('data-id'));
-                    const activeSorted = newIds.map(id => state.workflows.find(w => w.id === id));
-                    const inactive = state.workflows.filter(w => !w.active);
-                    state.workflows = [...activeSorted, ...inactive];
-                    saveData();
-                }
-            });
-        }
+        function goHome() { switchView('run'); closeRun(); }
 
         function renderRunView() {
             const container = document.getElementById('step-content');
@@ -1457,16 +1124,8 @@
                 return;
             }
 
-            if(w.steps.length === 0) {
-                container.innerHTML = `<div class="text-slate-400">No steps defined in this workflow.</div>`;
-                return;
-            }
-
             let step = w.steps.find(s => s.id === state.currentStepId);
-            if (!step) {
-                step = w.steps[0];
-                state.currentStepId = step.id;
-            }
+            if (!step) { step = w.steps[0]; state.currentStepId = step.id; }
             
             const total = w.steps.length;
             const currentIdx = state.historyStack.length;
@@ -1478,7 +1137,6 @@
             if(step.type === 'end') icon = 'check-circle';
             if(step.type === 'task') icon = 'check-square';
 
-            // ASSIGNEE DISPLAY
             let assigneeHtml = '';
             if (state.householdId && step.assignees && step.assignees.length > 0) {
                 const names = step.assignees.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'Unknown').join(', ');
@@ -1501,11 +1159,25 @@
                     </div>
                 `;
             } else if (step.type === 'task') {
-                html += `
-                    <button onclick="window.app.nextStep('${step.next}')" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-lg transition-transform active:scale-95 shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2">
-                        Next Step <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                    </button>
-                `;
+                if (state.trackingMode === 'online') {
+                    // Split Buttons for Online Mode
+                    html += `
+                    <div class="grid grid-cols-2 gap-4 w-full">
+                        <button onclick="window.app.nextStep('${step.next}')" class="py-4 px-6 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold transition-transform active:scale-95">
+                            Skip
+                        </button>
+                        <button onclick="window.app.markDoneAndNext('${step.id}', '${step.next}')" class="py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold transition-transform active:scale-95 shadow-lg shadow-emerald-500/25">
+                            Done
+                        </button>
+                    </div>`;
+                } else {
+                    // Standard Button
+                    html += `
+                        <button onclick="window.app.nextStep('${step.next}')" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-lg transition-transform active:scale-95 shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2">
+                            Next Step <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </button>
+                    `;
+                }
             } else if (step.type === 'end') {
                 html += `
                     <p class="text-slate-400 mb-6">You have completed your routine.</p>
@@ -1516,19 +1188,28 @@
             lucide.createIcons();
         }
 
+        function markDoneAndNext(stepId, nextId) {
+            // Log completion for current month
+            const now = new Date();
+            const key = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`; // YYYY-MM based on 0-index month? JS getMonth is 0-11.
+            // Let's standardise key to YYYY-M (0-11) to match the selector values easily
+            const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
+            
+            if (!state.trackingLog[monthKey]) state.trackingLog[monthKey] = {};
+            
+            const current = state.trackingLog[monthKey][stepId] || 0;
+            state.trackingLog[monthKey][stepId] = current + 1;
+            
+            saveData(); // Auto save
+            nextStep(nextId);
+        }
+
         function nextStep(targetId) {
             const w = getActiveWorkflow();
-            const targetStep = w.steps.find(s => s.id === targetId);
-            
-            if (!targetId || !targetStep) {
+            if (!targetId) {
                 const endStep = w.steps.find(s => s.type === 'end');
-                if (endStep) {
-                     state.historyStack.push(state.currentStepId);
-                     state.currentStepId = endStep.id;
-                } else {
-                    state.historyStack.push(state.currentStepId);
-                    state.currentStepId = COMPLETED_FLOW_ID;
-                }
+                state.historyStack.push(state.currentStepId);
+                state.currentStepId = endStep ? endStep.id : COMPLETED_FLOW_ID;
             } else {
                 state.historyStack.push(state.currentStepId);
                 state.currentStepId = targetId;
@@ -1546,428 +1227,93 @@
             renderRunView();
         }
 
-        // --- EDITOR LOGIC ---
-        function organizeSteps() {
-            const w = getActiveWorkflow();
-            if(!w.steps || w.steps.length === 0) return;
-
-            // Simple topological traversal to reorder visually
-            let ordered = [];
-            let visited = new Set();
-            let queue = [w.steps.find(s => s.id === 'start') ? 'start' : w.steps[0].id];
-
-            while(queue.length > 0) {
-                const id = queue.shift();
-                if(visited.has(id)) continue;
-                
-                const step = w.steps.find(s => s.id === id);
-                if(step) {
-                    visited.add(id);
-                    ordered.push(step);
-                    if(step.type === 'decision') {
-                        if(step.nextIfYes) queue.push(step.nextIfYes);
-                        if(step.nextIfNo) queue.push(step.nextIfNo);
-                    } else if (step.next) {
-                        queue.push(step.next);
-                    }
-                }
-            }
-            // Append orphaned steps
-            w.steps.forEach(s => {
-                if(!visited.has(s.id)) ordered.push(s);
-            });
-            w.steps = ordered;
-            saveData();
-            renderEditor();
-            showToast("Steps re-organized");
-        }
-
-        function insertStepAfter(index) {
-            const w = getActiveWorkflow();
-            const currentStep = w.steps[index];
-            const newId = "step-" + Math.floor(Math.random() * 10000);
+        // --- TRACKER RENDERING ENGINE ---
+        
+        function renderTrackingView() {
+            const monthIdx = parseInt(document.getElementById('track-month').value);
+            const year = parseInt(document.getElementById('track-year').value);
+            const skipDays = parseInt(document.getElementById('track-skip').value) || 0;
             
-            const newStep = { 
-                id: newId, 
-                type: "task", 
-                text: "New Step", 
-                next: "", 
-                assignees: [], 
-                targetCount: 1, 
-                targetPeriod: "day" 
-            };
-
-            if(currentStep.type === 'decision') {
-                 newStep.next = currentStep.nextIfYes || "";
-                 currentStep.nextIfYes = newId;
-            } else {
-                newStep.next = currentStep.next || "";
-                currentStep.next = newId;
-            }
-
-            // Insert in array right after
-            w.steps.splice(index + 1, 0, newStep);
-            saveData();
-            renderEditor();
-            showToast("Step Inserted");
-        }
-
-        function insertStepBefore(index) {
-            const w = getActiveWorkflow();
-            const currentStep = w.steps[index];
-            const newId = "step-" + Math.floor(Math.random() * 10000);
-            
-            const newStep = { 
-                id: newId, 
-                type: "task", 
-                text: "New Start Step", 
-                next: currentStep.id, 
-                assignees: [], 
-                targetCount: 1, 
-                targetPeriod: "day" 
-            };
-
-            if (currentStep.id === 'start' || index === 0) {
-                if(currentStep.id === 'start') {
-                    const oldId = "step-" + Math.floor(Math.random() * 10000);
-                    currentStep.id = oldId;
-                    newStep.id = 'start';
-                    newStep.next = oldId;
-                }
-                w.steps.splice(index, 0, newStep);
-                saveData();
-                renderEditor();
-                showToast("Step Inserted Before");
-            } else {
-                alert("Insert Before is currently only supported for the start of the list.");
-            }
-        }
-
-        function resetTarget(index, isCommitment = false) {
-            if(isCommitment) {
-                state.commitments[index].targetCount = 1;
-                state.commitments[index].targetPeriod = 'day';
-            } else {
-                const w = getActiveWorkflow();
-                w.steps[index].targetCount = 1;
-                w.steps[index].targetPeriod = 'day';
-            }
-            saveData();
-            renderEditor();
-        }
-
-        // Helper to render user chips
-        function renderAssigneeSelector(index, currentAssignees, isCommitment) {
-            if (!state.householdId) return '';
-
-            const members = state.householdMembers;
-            // Empty list implies "Household"
-            const isHousehold = !currentAssignees || currentAssignees.length === 0;
-            
-            let html = `<div class="flex flex-wrap gap-2 mt-2">`;
-            
-            // Household Tag
-            html += `<button onclick="window.app.setAssignee('${index}', 'HOUSEHOLD', ${isCommitment})" 
-                class="px-3 py-1 rounded-full text-xs font-bold transition-colors border ${isHousehold ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500'}">
-                Household
-            </button>`;
-
-            // Member Tags
-            Object.keys(members).forEach(uid => {
-                const isSelected = currentAssignees && currentAssignees.includes(uid);
-                html += `<button onclick="window.app.toggleAssignee('${index}', '${uid}', ${isCommitment})" 
-                    class="px-3 py-1 rounded-full text-xs font-bold transition-colors border ${isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500'}">
-                    ${members[uid].name}
-                </button>`;
-            });
-
-            html += `</div>`;
-            return html;
-        }
-
-        function toggleAssignee(index, uid, isCommitment) {
-            let list = isCommitment ? state.commitments[index].assignees : getActiveWorkflow().steps[index].assignees;
-            if(!list) list = [];
-
-            if(list.includes(uid)) {
-                list = list.filter(u => u !== uid);
-            } else {
-                list.push(uid);
-            }
-
-            if(isCommitment) state.commitments[index].assignees = list;
-            else getActiveWorkflow().steps[index].assignees = list;
-            
-            saveData();
-            renderEditor();
-        }
-
-        function setAssignee(index, type, isCommitment) {
-            if(type === 'HOUSEHOLD') {
-                if(isCommitment) state.commitments[index].assignees = [];
-                else getActiveWorkflow().steps[index].assignees = [];
-            }
-            saveData();
-            renderEditor();
-        }
-
-        function renderEditor() {
-            const container = document.getElementById('editor-list');
-            const commitmentsContainer = document.getElementById('commitments-list');
-            const commitmentsSection = document.getElementById('commitments-section');
-            const selector = document.getElementById('workflow-selector');
-            const activeW = getActiveWorkflow();
-            const btnActive = document.getElementById('btn-toggle-active');
-            
-            // Show/Hide Commitments Section based on Tracking Mode
-            if(state.trackingMode !== 'disabled') {
-                commitmentsSection.classList.remove('hidden');
-                
-                // Render Commitments
-                commitmentsContainer.innerHTML = '';
-                if(state.commitments.length === 0) {
-                    commitmentsContainer.innerHTML = '<div class="text-slate-500 text-sm italic">No standalone commitments yet.</div>';
-                } else {
-                    state.commitments.forEach((comm, idx) => {
-                        const assigneeHtml = renderAssigneeSelector(idx, comm.assignees, true);
-
-                        const el = document.createElement('div');
-                        el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 relative group';
-                        el.innerHTML = `
-                            <div class="flex items-center gap-4 mb-2">
-                                <input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name">
-                                <button onclick="window.app.deleteCommitment(${idx})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button>
-                            </div>
-                            
-                            <div class="flex flex-wrap gap-4 items-center">
-                                <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1">
-                                    <input type="number" value="${comm.targetCount || 1}" onchange="window.app.updateCommitment(${idx}, 'targetCount', this.value)" class="w-10 bg-transparent text-center text-sm focus:outline-none">
-                                    <span class="text-slate-500">/</span>
-                                    <select onchange="window.app.updateCommitment(${idx}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400">
-                                        <option value="day" ${comm.targetPeriod === 'day' ? 'selected' : ''}>Day</option>
-                                        <option value="week" ${comm.targetPeriod === 'week' ? 'selected' : ''}>Week</option>
-                                        <option value="month" ${comm.targetPeriod === 'month' ? 'selected' : ''}>Month</option>
-                                    </select>
-                                    <button onclick="window.app.resetTarget(${idx}, true)" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
-                                </div>
-                            </div>
-                            ${assigneeHtml}
-                        `;
-                        commitmentsContainer.appendChild(el);
-                    });
-                }
-            } else {
-                commitmentsSection.classList.add('hidden');
-            }
-
-            selector.innerHTML = '';
-            state.workflows.forEach(w => {
-                const opt = document.createElement('option');
-                opt.value = w.id;
-                opt.text = `${w.name} ${!w.active ? '(Inactive)' : ''}`;
-                opt.selected = w.id === state.activeWorkflowId;
-                selector.appendChild(opt);
-            });
-
-            if (activeW.active) {
-                btnActive.classList.remove('bg-red-900/50', 'text-red-200');
-                btnActive.classList.add('bg-slate-700', 'text-white');
-                btnActive.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
-                btnActive.title = "Deactivate Workflow";
-            } else {
-                btnActive.classList.remove('bg-slate-700', 'text-white');
-                btnActive.classList.add('bg-red-900/50', 'text-red-200');
-                btnActive.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
-                btnActive.title = "Activate Workflow";
-            }
-
-            container.innerHTML = '';
-            activeW.steps.forEach((step, index) => {
-                const el = document.createElement('div');
-                el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-4 relative group';
-                
-                const getOptions = (selected) => {
-                    let opts = `<option value="">-- End Routine --</option>`;
-                    activeW.steps.forEach(s => {
-                        opts += `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.text.substring(0, 20)}${s.text.length>20?'...':''} (${s.id})</option>`;
-                    });
-                    return opts;
-                };
-
-                const assigneeHtml = renderAssigneeSelector(index, step.assignees, false);
-
-                let targetHtml = '';
-                if(state.trackingMode !== 'disabled') {
-                    // Adjusted w-1/3 to w-full sm:w-auto to fix mobile layout overlap
-                    targetHtml = `
-                        <div class="w-full sm:w-auto min-w-[150px]">
-                            <label class="text-xs text-emerald-400 uppercase font-bold mb-1 block">Target Frequency</label>
-                            <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 w-full sm:w-auto">
-                                <input type="number" value="${step.targetCount || 1}" onchange="window.app.updateStep(${index}, 'targetCount', this.value)" class="w-8 bg-transparent text-center text-sm focus:outline-none">
-                                <span class="text-slate-500">/</span>
-                                <select onchange="window.app.updateStep(${index}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400">
-                                    <option value="day" ${step.targetPeriod === 'day' ? 'selected' : ''}>Day</option>
-                                    <option value="week" ${step.targetPeriod === 'week' ? 'selected' : ''}>Week</option>
-                                    <option value="month" ${step.targetPeriod === 'month' ? 'selected' : ''}>Month</option>
-                                </select>
-                                <button onclick="window.app.resetTarget(${index})" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                let logicHtml = '';
-                if(step.type === 'task') {
-                    logicHtml = `
-                        <div class="flex flex-col">
-                            <label class="text-xs text-slate-500 uppercase font-bold mb-1">Next Step</label>
-                            <select onchange="window.app.updateStep(${index}, 'next', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.next)}</select>
-                        </div>`;
-                } else if (step.type === 'decision') {
-                    logicHtml = `
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="flex flex-col">
-                                <label class="text-xs text-emerald-500 uppercase font-bold mb-1">If Yes</label>
-                                <select onchange="window.app.updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfYes)}</select>
-                            </div>
-                            <div class="flex flex-col">
-                                <label class="text-xs text-amber-500 uppercase font-bold mb-1">If No</label>
-                                <select onchange="window.app.updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfNo)}</select>
-                            </div>
-                        </div>`;
-                }
-
-                el.innerHTML = `
-                    <div class="flex justify-between items-start gap-4">
-                        <div class="w-1/4 min-w-[100px]">
-                            <label class="text-xs text-slate-500 uppercase font-bold">ID</label>
-                            <input type="text" value="${step.id}" onchange="window.app.updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none">
-                        </div>
-                        <div class="flex-1">
-                            <label class="text-xs text-slate-500 uppercase font-bold">Display Text</label>
-                            <input type="text" value="${step.text}" onchange="window.app.updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none">
-                        </div>
-                         <div class="w-24">
-                            <label class="text-xs text-slate-500 uppercase font-bold">Type</label>
-                            <select onchange="window.app.updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">
-                                <option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option>
-                                <option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option>
-                                <option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option>
-                            </select>
-                        </div>
-                    </div>
-                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex flex-wrap gap-4 mt-2 items-end">${targetHtml}</div>${assigneeHtml}</div>` : ''}
-                    
-                    <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
-                        ${(index === 0 || step.type === 'task') ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
-                        <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-200 px-2 py-1 rounded border border-red-900 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
-                    </div>
-                `;
-                container.appendChild(el);
-            });
+            const date = new Date(year, monthIdx, 1);
+            const container = document.getElementById('track-content');
+            container.innerHTML = generateTrackerHTML(date, skipDays, true);
             lucide.createIcons();
-        }
-
-        function updateStep(index, field, value) {
-            const w = getActiveWorkflow();
-            w.steps[index][field] = value;
-            saveData();
-            if(field === 'type') renderEditor();
-        }
-
-        function updateAssignee(index, select) {
-            const w = getActiveWorkflow();
-            if(select.multiple) {
-                const selected = Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
-                w.steps[index].assignees = selected;
-            } else {
-                w.steps[index].assignees = select.value ? [select.value] : [];
-            }
-            saveData();
-        }
-
-        function addStep() {
-            const w = getActiveWorkflow();
-            const newId = "step-" + Math.floor(Math.random() * 10000);
-            w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" });
-            saveData();
-            renderEditor();
-            setTimeout(() => {
-                const list = document.getElementById('editor-list');
-                list.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-        }
-
-        function deleteStep(index) {
-            if(confirm("Delete this step?")) {
-                const w = getActiveWorkflow();
-                w.steps.splice(index, 1);
-                saveData();
-                renderEditor();
-            }
-        }
-
-        // --- PRINT ENGINE ---
-        function openPrintSetup() {
-            document.getElementById('print-setup-modal').classList.remove('hidden');
         }
 
         function generatePDF() {
             document.getElementById('print-setup-modal').classList.add('hidden');
             const monthIdx = parseInt(document.getElementById('print-month-select').value);
             const year = parseInt(document.getElementById('print-year-select').value);
-            const skipInput = document.getElementById('print-skip-days').value;
+            const skipDays = parseInt(document.getElementById('print-skip-days').value) || 0;
             
             const date = new Date(year, monthIdx, 1);
-            const skipDays = parseInt(skipInput) || 0;
-            
-            exportPDF(date, skipDays);
-        }
-
-        function calculateCircles(targetCount, targetPeriod, daysInMonth, skipDays) {
-            const tc = parseInt(targetCount || 1);
-            
-            if (targetPeriod === 'month') return tc;
-            if (targetPeriod === 'week') return Math.ceil(((daysInMonth - skipDays) / 7) * tc);
-            
-            // Daily
-            return Math.max(0, daysInMonth - skipDays);
-        }
-
-        function exportPDF(printDate = new Date(), skipDays = 0) {
             const container = document.getElementById('print-view');
+            container.innerHTML = generateTrackerHTML(date, skipDays, false);
+            lucide.createIcons();
+            setTimeout(() => window.print(), 800);
+        }
+
+        function generateTrackerHTML(printDate, skipDays, isWebMode) {
             const monthName = printDate.toLocaleString('default', { month: 'long' });
             const year = printDate.getFullYear();
             const daysInMonth = new Date(year, printDate.getMonth() + 1, 0).getDate();
             const householdName = state.householdName || (state.householdId ? 'My Household' : 'Personal');
-            
-            // --- Helpers ---
-            const renderCircles = (count) => {
+            const trackingKey = `${year}-${printDate.getMonth()}`;
+
+            // Helpers
+            const getCircleCount = (step) => {
+                const tc = parseInt(step.targetCount || 1);
+                const period = step.targetPeriod || 'day';
+                if (period === 'month') return tc;
+                if (period === 'week') return Math.ceil(((daysInMonth - skipDays) / 7) * tc);
+                return Math.max(0, daysInMonth - skipDays);
+            };
+
+            const renderCircles = (stepId, count) => {
                 let html = '';
-                for(let i=1; i<=count; i++) html += `<div class="circle">${i}</div>`;
+                // Get current filled count from log
+                const filledCount = (state.trackingLog[trackingKey] && state.trackingLog[trackingKey][stepId]) || 0;
+
+                for(let i=1; i<=count; i++) {
+                    const isFilled = i <= filledCount;
+                    const filledClass = isWebMode && isFilled ? 'filled' : '';
+                    
+                    if (isWebMode) {
+                        html += `<div class="circle ${filledClass}" onclick="window.app.toggleHabitCircle('${trackingKey}', '${stepId}', ${i})">${i}</div>`;
+                    } else {
+                        html += `<div class="circle">${i}</div>`;
+                    }
+                }
                 return html;
             };
 
-            const renderAssigneeRow = (uids, circleCount) => {
+            const renderAssigneeRow = (stepId, uids, circleCount) => {
                 if(!uids || uids.length === 0) {
-                    return `<div class="cell-checks">${renderCircles(circleCount)}</div>`;
+                    return `<div class="cell-checks">${renderCircles(stepId, circleCount)}</div>`;
                 } else if (uids.length === 1) {
                     const name = state.householdMembers[uids[0]] ? state.householdMembers[uids[0]].name : 'User';
                     return `
                         <div class="cell-checks">
                             <span class="assignee">${name}</span>
-                            ${renderCircles(circleCount)}
+                            ${renderCircles(stepId, circleCount)}
                         </div>`;
                 } else {
                     let html = `<div class="cell-checks block">`;
                     uids.forEach(uid => {
                         const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
+                        // For multi-assignee, we theoretically need separate IDs per user. 
+                        // Simplified: Using same stepId means shared tracking. 
+                        // Advanced: append uid to stepId for unique tracking. 
+                        // Given current data structure, we'll assume shared tracking for now or stick to simple ID.
+                        // To make it robust for online tracking, we'd need composite keys.
+                        // Let's use a composite key suffix for display if online.
+                        const compositeId = isWebMode ? `${stepId}_${uid}` : stepId; 
+                        
                         html += `
                             <div class="lane">
                                 <span class="assignee lane-label">${name}</span>
                                 <div class="flex flex-wrap gap-1">
-                                    ${renderCircles(circleCount)}
+                                    ${renderCircles(compositeId, circleCount)}
                                 </div>
                             </div>
                         `;
@@ -1985,41 +1331,35 @@
             }
 
             const renderRow = (step, isFork = false) => {
-                const circleCount = calculateCircles(step.targetCount, step.targetPeriod, daysInMonth, skipDays);
+                const circleCount = getCircleCount(step);
                 let targetText = '';
-                
-                // Only show target text if valid and not default daily 1x
                 if(step.targetPeriod && step.targetCount && (step.targetPeriod !== 'day' || step.targetCount > 1)) {
-                    targetText = `<div class="text-[10px] text-slate-400 mt-1">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
+                    targetText = `<div class="text-[10px] opacity-60 mt-1">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
                 }
 
                 if (isFork) {
-                    // Custom rendering for fork to ensure proper wrapping and layout
                     let innerContent = '';
                     const uids = step.assignees;
-                    
                     if(!uids || uids.length <= 1) {
-                         // Simple circle list - just circles in a flex wrap container
-                         innerContent = `<div class="flex flex-wrap gap-1 mt-2">${renderCircles(circleCount)}</div>`;
+                         innerContent = `<div class="flex flex-wrap gap-1 mt-2">${renderCircles(step.id, circleCount)}</div>`;
                     } else {
-                        // Multi-assignee lanes
                         innerContent = `<div class="mt-2 space-y-2">`;
                         uids.forEach(uid => {
                             const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
+                            const compositeId = isWebMode ? `${step.id}_${uid}` : step.id; 
                             innerContent += `
                                 <div class="flex items-center gap-2">
                                     <span class="assignee lane-label">${name}</span>
                                     <div class="flex flex-wrap gap-1">
-                                        ${renderCircles(circleCount)}
+                                        ${renderCircles(compositeId, circleCount)}
                                     </div>
                                 </div>
                             `;
                         });
                         innerContent += `</div>`;
                     }
-
                     return `
-                    <div class="border-b border-slate-200 last:border-b-0 p-3">
+                    <div class="border-b border-opacity-20 last:border-b-0 p-3">
                         <div class="font-bold text-sm leading-tight">${step.text}</div>
                         ${renderAssigneeBadge(step.assignees)}
                         ${targetText}
@@ -2030,22 +1370,19 @@
 
                 return `
                     <div class="row">
-                        <div class="cell-habit bg-slate-50">
+                        <div class="cell-habit bg-alt">
                             <div class="font-bold leading-tight">${step.text}</div>
                             ${renderAssigneeBadge(step.assignees)}
                             ${targetText}
                         </div>
-                        ${renderAssigneeRow(step.assignees, circleCount)}
+                        ${renderAssigneeRow(step.id, step.assignees, circleCount)}
                     </div>
                 `;
             };
 
-            // --- Recursive Graph Renderer ---
-            const w = getActiveWorkflow();
-            const stepsMap = new Map(w.steps.map(s => [s.id, s]));
+            // Recursive Graph Traversal (Same as before)
             const visited = new Set();
-
-            const findConvergence = (startA, startB) => {
+            const findConvergence = (startA, startB, stepsMap) => {
                 let pathA = new Set();
                 let qA = [startA];
                 while(qA.length) {
@@ -2058,7 +1395,6 @@
                         else if(s.next) qA.push(s.next);
                     }
                 }
-
                 let qB = [startB];
                 let visitedB = new Set();
                 while(qB.length) {
@@ -2075,43 +1411,25 @@
                 return null; 
             };
 
-            const renderFlow = (currentId, stopAt = null, inFork = false) => {
+            const renderFlow = (currentId, stepsMap, stopAt = null, inFork = false) => {
                 let html = '';
                 let curr = currentId;
-
                 while(curr && curr !== stopAt) {
                     if(visited.has(curr)) break; 
                     visited.add(curr);
-
                     const step = stepsMap.get(curr);
                     if(!step) break;
-
                     if(step.type === 'end') break;
 
                     if(step.type === 'decision') {
-                        html += `
-                            <div class="border-b border-slate-300">
-                                <div class="fork-decision-title">
-                                    <i data-lucide="git-branch" class="w-4 h-4"></i> Decision: ${step.text}
-                                </div>
-                        `;
-                        
-                        const convergeId = findConvergence(step.nextIfYes, step.nextIfNo);
-                        
+                        html += `<div class="border-b border-opacity-20"><div class="fork-decision-title"><i data-lucide="git-branch" class="w-4 h-4"></i> Decision: ${step.text}</div>`;
+                        const convergeId = findConvergence(step.nextIfYes, step.nextIfNo, stepsMap);
                         html += `<div class="fork-container">`;
-                        html += `<div class="fork-column">
-                                    <div class="fork-header text-emerald-600">Yes</div>
-                                    ${renderFlow(step.nextIfYes, convergeId, true)}
-                                 </div>`;
-                        html += `<div class="fork-column">
-                                    <div class="fork-header text-amber-600">No</div>
-                                    ${renderFlow(step.nextIfNo, convergeId, true)}
-                                 </div>`;
+                        html += `<div class="fork-column"><div class="fork-header text-emerald-600">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}</div>`;
+                        html += `<div class="fork-column"><div class="fork-header text-amber-600">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
                         html += `</div></div>`; 
-                        
                         curr = convergeId;
                         if(curr) visited.delete(curr); 
-
                     } else {
                         html += renderRow(step, inFork);
                         curr = step.next;
@@ -2120,18 +1438,15 @@
                 return html;
             };
 
-            let startId = 'start';
-            if(!stepsMap.has(startId)) startId = w.steps[0].id;
-
             let html = `
-                <div class="page">
-                    <div class="flex justify-between items-end mb-8 border-b-4 border-black pb-4">
+                <div class="page ${isWebMode ? 'mode-web' : 'mode-print'}">
+                    <div class="flex justify-between items-end mb-8 border-b-4 ${isWebMode ? 'border-slate-600' : 'border-black'} pb-4">
                         <div>
                             <h1 class="text-4xl font-black uppercase tracking-tight">Routine Tracker</h1>
-                            <p class="text-slate-500 font-medium mt-1">${monthName} ${year}</p>
+                            <p class="opacity-60 font-medium mt-1">${monthName} ${year}</p>
                         </div>
                         <div class="text-right">
-                            <div class="text-sm font-bold text-slate-400 uppercase">Household</div>
+                            <div class="text-sm font-bold opacity-40 uppercase">Household</div>
                             <div class="text-lg font-bold">${householdName}</div>
                         </div>
                     </div>
@@ -2139,14 +1454,15 @@
 
             const activeWorkflows = state.workflows.filter(wf => wf.active);
             activeWorkflows.forEach(wf => {
-                visited.clear(); 
+                visited.clear();
+                const stepsMap = new Map(wf.steps.map(s => [s.id, s]));
                 html += `
                     <div class="tracker-section">
                         <div class="section-header flex justify-between">
                             <span>${wf.name}</span>
                             <span class="opacity-70 text-sm font-normal normal-case">Workflow</span>
                         </div>
-                        ${renderFlow(wf.steps.find(s=>s.id==='start') ? 'start' : wf.steps[0].id)}
+                        ${renderFlow(wf.steps.find(s=>s.id==='start') ? 'start' : wf.steps[0].id, stepsMap)}
                     </div>
                 `;
             });
@@ -2157,31 +1473,316 @@
                 html += `</div>`;
             }
 
-            html += `
-                <div class="reflection-container">
-                    <div class="reflection-box"><div class="reflection-title"><i data-lucide="trophy" class="w-4 h-4"></i> Monthly Wins</div></div>
-                    <div class="reflection-box"><div class="reflection-title"><i data-lucide="target" class="w-4 h-4"></i> Focus for Next Month</div></div>
-                </div>
-                <div class="mt-8 pt-4 border-t-2 border-slate-200 flex justify-between text-xs text-slate-400"><div>Generated by StackHabits</div></div>
-                </div>
-            `;
-
-            container.innerHTML = html;
-            lucide.createIcons();
-            setTimeout(() => window.print(), 800);
+            if(!isWebMode) {
+                html += `
+                    <div class="reflection-container">
+                        <div class="reflection-box"><div class="reflection-title"><i data-lucide="trophy" class="w-4 h-4"></i> Monthly Wins</div></div>
+                        <div class="reflection-box"><div class="reflection-title"><i data-lucide="target" class="w-4 h-4"></i> Focus for Next Month</div></div>
+                    </div>
+                    <div class="mt-8 pt-4 border-t-2 border-slate-200 flex justify-between text-xs text-slate-400"><div>Generated by StackHabits</div></div>
+                `;
+            }
+            
+            html += `</div>`; // Close page
+            return html;
         }
 
+        function toggleHabitCircle(key, id, value) {
+            if(!state.trackingLog[key]) state.trackingLog[key] = {};
+            const current = state.trackingLog[key][id] || 0;
+            
+            // If clicking the exact current value, toggle off (decrement to prev)
+            // If clicking a higher value, fill up to that value
+            // If clicking a lower value, reduce to that value
+            if (current === value) {
+                state.trackingLog[key][id] = value - 1;
+            } else {
+                state.trackingLog[key][id] = value;
+            }
+            
+            saveData();
+            renderTrackingView(); // Re-render to show animation
+        }
+
+        function showToast(msg, isError = false) {
+            const el = document.getElementById("toast");
+            el.innerText = msg;
+            el.style.backgroundColor = isError ? "#dc2626" : "#10b981";
+            el.className = "show";
+            setTimeout(() => { el.className = el.className.replace("show", ""); }, 3000);
+        }
+
+        function updateConnectionStatus(isOnline) {
+            state.isOnline = isOnline;
+            const el = document.getElementById('connection-status');
+            if(el) {
+                el.className = `w-2 h-2 rounded-full ml-2 ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`;
+                el.title = isOnline ? "Connected to Cloud" : "Offline / Error";
+            }
+        }
+
+        // --- DASHBOARD RENDER ---
+        function renderDashboard() {
+            const container = document.getElementById('run-dashboard');
+            if (sortableInstance) sortableInstance.destroy();
+            container.innerHTML = '';
+            const activeWorkflows = state.workflows.filter(w => w.active);
+
+            if (activeWorkflows.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">No active workflows.<br>Go to Edit to create or enable one.</div>';
+                return;
+            }
+
+            activeWorkflows.forEach(w => {
+                const card = document.createElement('div');
+                card.setAttribute('data-id', w.id);
+                card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group cursor-pointer select-none";
+                card.onclick = (e) => { if(card.classList.contains('sortable-drag')) return; startRun(w.id); };
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-4 pointer-events-none">
+                        <div class="p-3 bg-indigo-500/10 rounded-lg text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                            <i data-lucide="play" class="w-6 h-6"></i>
+                        </div>
+                        <span class="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded">${w.steps.length} steps</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-1 pointer-events-none">${w.name}</h3>
+                    <p class="text-sm text-slate-400 pointer-events-none">Tap to start routine</p>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+
+            sortableInstance = new Sortable(container, {
+                animation: 150, ghostClass: 'sortable-ghost', delay: 200, delayOnTouchOnly: true,
+                onEnd: function (evt) {
+                    const newIds = Array.from(container.children).map(el => el.getAttribute('data-id'));
+                    const activeSorted = newIds.map(id => state.workflows.find(w => w.id === id));
+                    const inactive = state.workflows.filter(w => !w.active);
+                    state.workflows = [...activeSorted, ...inactive];
+                    saveData();
+                }
+            });
+        }
+
+        // --- EDITOR RENDER & UI HELPERS ---
+        function renderAuthUI() {
+            const statusText = document.getElementById('user-status-text');
+            const dropdown = document.getElementById('auth-dropdown-content');
+            const userBtn = document.getElementById('user-btn');
+
+            if (state.isLoadingAuth) { statusText.innerHTML = '<span class="animate-pulse">...</span>'; userBtn.classList.remove('text-indigo-400'); return; }
+
+            if (state.user) {
+                const displayName = state.user.isAnonymous ? "Guest" : state.user.email.split('@')[0];
+                statusText.innerText = displayName; userBtn.classList.add('text-indigo-400');
+                dropdown.innerHTML = `
+                    <div class="text-xs text-slate-500 mb-2 px-2 truncate">${state.user.isAnonymous ? 'Guest User' : state.user.email}</div>
+                    <button onclick="window.app.openSettingsModal()" class="w-full text-left px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700 rounded transition-colors mb-1 flex items-center gap-2"><i data-lucide="settings" class="w-3 h-3"></i> Settings</button>
+                    <button onclick="window.app.doLogout()" class="w-full text-left px-2 py-1.5 text-sm text-red-400 hover:bg-slate-700 rounded transition-colors">Sign Out</button>
+                `;
+            } else {
+                statusText.innerText = "Local"; userBtn.classList.remove('text-indigo-400');
+                dropdown.innerHTML = `
+                    <div class="text-xs text-slate-500 mb-2 px-2">Sync across devices</div>
+                    <button onclick="window.app.openAuthModal()" class="w-full text-left px-2 py-1.5 text-sm text-indigo-400 hover:bg-slate-700 rounded transition-colors">Sign In / Register</button>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); renderSettingsUI(); }
+        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+        function openPrintSetup() { document.getElementById('print-setup-modal').classList.remove('hidden'); }
+
+        function renderSettingsUI() {
+            const radios = document.getElementsByName('tracking_mode');
+            radios.forEach(r => { r.checked = (r.value === state.trackingMode); });
+
+            const noneDiv = document.getElementById('household-none'); const activeDiv = document.getElementById('household-active');
+            const idDisplay = document.getElementById('current-household-id'); const listDiv = document.getElementById('household-members-list');
+            const nameInput = document.getElementById('household-name-input');
+
+            if (state.householdId) {
+                noneDiv.classList.add('hidden'); activeDiv.classList.remove('hidden');
+                idDisplay.innerText = state.householdId; nameInput.value = state.householdName || '';
+                listDiv.innerHTML = '';
+                Object.keys(state.householdMembers).forEach(uid => {
+                    const member = state.householdMembers[uid];
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-700";
+                    row.innerHTML = `<div class="truncate"><div class="font-bold text-sm text-white">${member.name}</div><div class="text-xs text-slate-500 truncate w-32">${member.email}</div></div><button onclick="window.app.promptRenameMember('${uid}', '${member.name}')" class="p-1 text-slate-400 hover:text-white" title="Edit Name"><i data-lucide="edit-2" class="w-3 h-3"></i></button>`;
+                    listDiv.appendChild(row);
+                });
+                lucide.createIcons();
+            } else { noneDiv.classList.remove('hidden'); activeDiv.classList.add('hidden'); }
+        }
+
+        function promptRenameMember(uid, currentName) { const newName = prompt("Enter display name:", currentName); if(newName && newName.trim() !== "") updateMemberName(uid, newName.trim()); }
+
+        // --- AUTH & MISC ---
+        function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); document.getElementById('auth-email').focus(); }
+        function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); document.getElementById('auth-error').classList.add('hidden'); }
+        function toggleAuthMode() {
+            state.isAuthModeLogin = !state.isAuthModeLogin;
+            const title = document.getElementById('auth-title'); const btn = document.getElementById('auth-submit-btn');
+            const toggleText = document.getElementById('auth-toggle-text'); const toggleBtn = document.getElementById('auth-toggle-btn');
+            if(state.isAuthModeLogin) { title.innerText = "Sign In"; btn.innerText = "Sign In"; toggleText.innerText = "Don't have an account?"; toggleBtn.innerText = "Sign Up"; } 
+            else { title.innerText = "Create Account"; btn.innerText = "Create Account"; toggleText.innerText = "Already have an account?"; toggleBtn.innerText = "Sign In"; }
+        }
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value; const password = document.getElementById('auth-password').value;
+            const errorBox = document.getElementById('auth-error'); const submitBtn = document.getElementById('auth-submit-btn');
+            errorBox.classList.add('hidden'); submitBtn.disabled = true; submitBtn.innerHTML = '<div class="loader mx-auto"></div>';
+            try {
+                if (state.isAuthModeLogin) await signInWithEmailAndPassword(auth, email, password);
+                else await createUserWithEmailAndPassword(auth, email, password);
+                closeAuthModal();
+            } catch (error) { console.error("Auth Error:", error); errorBox.innerText = error.code ? error.code.replace('auth/', '').replace(/-/g, ' ') : error.message; errorBox.classList.remove('hidden'); } 
+            finally { submitBtn.disabled = false; submitBtn.innerText = state.isAuthModeLogin ? "Sign In" : "Create Account"; }
+        }
+        async function handleGuestLogin() {
+             const errorBox = document.getElementById('auth-error');
+             try { await signInAnonymously(auth); closeAuthModal(); } catch (error) { errorBox.innerText = "Guest login failed: " + error.message; errorBox.classList.remove('hidden'); }
+        }
+        async function doLogout() { try { await signOut(auth); } catch (error) { console.error("Logout failed", error); } }
+
+        // --- WORKFLOW EDITOR FUNCTIONS (Same as before) ---
+        function switchEditWorkflow(id) { state.activeWorkflowId = id; renderEditor(); }
+        function createWorkflow() {
+            const name = prompt("Name for new workflow:", "Evening Routine");
+            if(name) { const newId = "workflow-" + Date.now(); state.workflows.push({ id: newId, name: name, active: true, steps: JSON.parse(JSON.stringify(DEFAULT_WORKFLOW_STEPS)) }); state.activeWorkflowId = newId; saveData(); }
+        }
+        function renameWorkflow() { const w = getActiveWorkflow(); const newName = prompt("Rename workflow:", w.name); if(newName) { w.name = newName; saveData(); } }
+        function deleteWorkflow() { if(state.workflows.length <= 1) { alert("You must have at least one workflow."); return; } if(confirm(`Delete "${getActiveWorkflow().name}"?`)) { state.workflows = state.workflows.filter(w => w.id !== state.activeWorkflowId); state.activeWorkflowId = state.workflows[0].id; saveData(); } }
+        function toggleWorkflowActive() { const w = getActiveWorkflow(); w.active = !w.active; saveData(); }
+        
+        function organizeSteps() {
+            const w = getActiveWorkflow(); if(!w.steps || w.steps.length === 0) return;
+            let ordered = []; let visited = new Set(); let queue = [w.steps.find(s => s.id === 'start') ? 'start' : w.steps[0].id];
+            while(queue.length > 0) {
+                const id = queue.shift(); if(visited.has(id)) continue;
+                const step = w.steps.find(s => s.id === id);
+                if(step) { visited.add(id); ordered.push(step); if(step.type === 'decision') { if(step.nextIfYes) queue.push(step.nextIfYes); if(step.nextIfNo) queue.push(step.nextIfNo); } else if (step.next) { queue.push(step.next); } }
+            }
+            w.steps.forEach(s => { if(!visited.has(s.id)) ordered.push(s); }); w.steps = ordered; saveData(); renderEditor(); showToast("Steps re-organized");
+        }
+        
+        function insertStepAfter(index) {
+            const w = getActiveWorkflow(); const currentStep = w.steps[index]; const newId = "step-" + Math.floor(Math.random() * 10000);
+            const newStep = { id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" };
+            if(currentStep.type === 'decision') { newStep.next = currentStep.nextIfYes || ""; currentStep.nextIfYes = newId; } else { newStep.next = currentStep.next || ""; currentStep.next = newId; }
+            w.steps.splice(index + 1, 0, newStep); saveData(); renderEditor(); showToast("Step Inserted");
+        }
+        function insertStepBefore(index) {
+            const w = getActiveWorkflow(); const currentStep = w.steps[index]; const newId = "step-" + Math.floor(Math.random() * 10000);
+            const newStep = { id: newId, type: "task", text: "New Start Step", next: currentStep.id, assignees: [], targetCount: 1, targetPeriod: "day" };
+            if (currentStep.id === 'start' || index === 0) {
+                if(currentStep.id === 'start') { const oldId = "step-" + Math.floor(Math.random() * 10000); currentStep.id = oldId; newStep.id = 'start'; newStep.next = oldId; }
+                w.steps.splice(index, 0, newStep); saveData(); renderEditor(); showToast("Step Inserted Before");
+            } else { alert("Insert Before is currently only supported for the start of the list."); }
+        }
+        function resetTarget(index, isCommitment = false) {
+            if(isCommitment) { state.commitments[index].targetCount = 1; state.commitments[index].targetPeriod = 'day'; } else { const w = getActiveWorkflow(); w.steps[index].targetCount = 1; w.steps[index].targetPeriod = 'day'; }
+            saveData(); renderEditor();
+        }
+        
+        function renderAssigneeSelector(index, currentAssignees, isCommitment) {
+            if (!state.householdId) return '';
+            const members = state.householdMembers; const isHousehold = !currentAssignees || currentAssignees.length === 0;
+            let html = `<div class="flex flex-wrap gap-2 mt-2">`;
+            html += `<button onclick="window.app.setAssignee('${index}', 'HOUSEHOLD', ${isCommitment})" class="px-3 py-1 rounded-full text-xs font-bold transition-colors border ${isHousehold ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500'}">Household</button>`;
+            Object.keys(members).forEach(uid => {
+                const isSelected = currentAssignees && currentAssignees.includes(uid);
+                html += `<button onclick="window.app.toggleAssignee('${index}', '${uid}', ${isCommitment})" class="px-3 py-1 rounded-full text-xs font-bold transition-colors border ${isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500'}">${members[uid].name}</button>`;
+            });
+            html += `</div>`; return html;
+        }
+        function toggleAssignee(index, uid, isCommitment) {
+            let list = isCommitment ? state.commitments[index].assignees : getActiveWorkflow().steps[index].assignees; if(!list) list = [];
+            if(list.includes(uid)) list = list.filter(u => u !== uid); else list.push(uid);
+            if(isCommitment) state.commitments[index].assignees = list; else getActiveWorkflow().steps[index].assignees = list;
+            saveData(); renderEditor();
+        }
+        function setAssignee(index, type, isCommitment) {
+            if(type === 'HOUSEHOLD') { if(isCommitment) state.commitments[index].assignees = []; else getActiveWorkflow().steps[index].assignees = []; }
+            saveData(); renderEditor();
+        }
+        
+        function renderEditor() {
+            const container = document.getElementById('editor-list');
+            const commitmentsContainer = document.getElementById('commitments-list');
+            const commitmentsSection = document.getElementById('commitments-section');
+            const selector = document.getElementById('workflow-selector');
+            const activeW = getActiveWorkflow();
+            const btnActive = document.getElementById('btn-toggle-active');
+            
+            if(state.trackingMode !== 'disabled') {
+                commitmentsSection.classList.remove('hidden');
+                commitmentsContainer.innerHTML = '';
+                if(state.commitments.length === 0) commitmentsContainer.innerHTML = '<div class="text-slate-500 text-sm italic">No standalone commitments yet.</div>';
+                else {
+                    state.commitments.forEach((comm, idx) => {
+                        const assigneeHtml = renderAssigneeSelector(idx, comm.assignees, true);
+                        const el = document.createElement('div'); el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 relative group';
+                        el.innerHTML = `
+                            <div class="flex items-center gap-4 mb-2"><input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name"><button onclick="window.app.deleteCommitment(${idx})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+                            <div class="flex flex-wrap gap-4 items-center"><div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1"><input type="number" value="${comm.targetCount || 1}" onchange="window.app.updateCommitment(${idx}, 'targetCount', this.value)" class="w-10 bg-transparent text-center text-sm focus:outline-none"><span class="text-slate-500">/</span><select onchange="window.app.updateCommitment(${idx}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400"><option value="day" ${comm.targetPeriod === 'day' ? 'selected' : ''}>Day</option><option value="week" ${comm.targetPeriod === 'week' ? 'selected' : ''}>Week</option><option value="month" ${comm.targetPeriod === 'month' ? 'selected' : ''}>Month</option></select><button onclick="window.app.resetTarget(${idx}, true)" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button></div></div>${assigneeHtml}
+                        `;
+                        commitmentsContainer.appendChild(el);
+                    });
+                }
+            } else { commitmentsSection.classList.add('hidden'); }
+
+            selector.innerHTML = ''; state.workflows.forEach(w => { const opt = document.createElement('option'); opt.value = w.id; opt.text = `${w.name} ${!w.active ? '(Inactive)' : ''}`; opt.selected = w.id === state.activeWorkflowId; selector.appendChild(opt); });
+            if (activeW.active) { btnActive.classList.remove('bg-red-900/50', 'text-red-200'); btnActive.classList.add('bg-slate-700', 'text-white'); btnActive.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>'; btnActive.title = "Deactivate Workflow"; } else { btnActive.classList.remove('bg-slate-700', 'text-white'); btnActive.classList.add('bg-red-900/50', 'text-red-200'); btnActive.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>'; btnActive.title = "Activate Workflow"; }
+
+            container.innerHTML = '';
+            activeW.steps.forEach((step, index) => {
+                const el = document.createElement('div'); el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-4 relative group';
+                const getOptions = (selected) => { let opts = `<option value="">-- End Routine --</option>`; activeW.steps.forEach(s => { opts += `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.text.substring(0, 20)}${s.text.length>20?'...':''} (${s.id})</option>`; }); return opts; };
+                const assigneeHtml = renderAssigneeSelector(index, step.assignees, false);
+                let targetHtml = '';
+                if(state.trackingMode !== 'disabled') {
+                    targetHtml = `<div class="w-full sm:w-auto min-w-[150px]"><label class="text-xs text-emerald-400 uppercase font-bold mb-1 block">Target Frequency</label><div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 w-full sm:w-auto"><input type="number" value="${step.targetCount || 1}" onchange="window.app.updateStep(${index}, 'targetCount', this.value)" class="w-8 bg-transparent text-center text-sm focus:outline-none"><span class="text-slate-500">/</span><select onchange="window.app.updateStep(${index}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400"><option value="day" ${step.targetPeriod === 'day' ? 'selected' : ''}>Day</option><option value="week" ${step.targetPeriod === 'week' ? 'selected' : ''}>Week</option><option value="month" ${step.targetPeriod === 'month' ? 'selected' : ''}>Month</option></select><button onclick="window.app.resetTarget(${index})" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button></div></div>`;
+                }
+
+                let logicHtml = '';
+                if(step.type === 'task') {
+                    logicHtml = `<div class="flex flex-col"><label class="text-xs text-slate-500 uppercase font-bold mb-1">Next Step</label><select onchange="window.app.updateStep(${index}, 'next', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.next)}</select></div>`;
+                } else if (step.type === 'decision') {
+                    logicHtml = `<div class="grid grid-cols-2 gap-4"><div class="flex flex-col"><label class="text-xs text-emerald-500 uppercase font-bold mb-1">If Yes</label><select onchange="window.app.updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfYes)}</select></div><div class="flex flex-col"><label class="text-xs text-amber-500 uppercase font-bold mb-1">If No</label><select onchange="window.app.updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfNo)}</select></div></div>`;
+                }
+
+                el.innerHTML = `
+                    <div class="flex justify-between items-start gap-4"><div class="w-1/4 min-w-[100px]"><label class="text-xs text-slate-500 uppercase font-bold">ID</label><input type="text" value="${step.id}" onchange="window.app.updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none"></div><div class="flex-1"><label class="text-xs text-slate-500 uppercase font-bold">Display Text</label><input type="text" value="${step.text}" onchange="window.app.updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none"></div><div class="w-24"><label class="text-xs text-slate-500 uppercase font-bold">Type</label><select onchange="window.app.updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none"><option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option><option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option><option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option></select></div></div>
+                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex flex-wrap gap-4 mt-2 items-end">${targetHtml}</div>${assigneeHtml}</div>` : ''}
+                    <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
+                        ${(index === 0 || step.type === 'task') ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
+                        <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-200 px-2 py-1 rounded border border-red-900 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+            lucide.createIcons();
+        }
+
+        function updateStep(index, field, value) { const w = getActiveWorkflow(); w.steps[index][field] = value; saveData(); if(field === 'type') renderEditor(); }
+        function addStep() { const w = getActiveWorkflow(); const newId = "step-" + Math.floor(Math.random() * 10000); w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" }); saveData(); renderEditor(); setTimeout(() => { const list = document.getElementById('editor-list'); list.lastElementChild?.scrollIntoView({ behavior: 'smooth' }); }, 100); }
+        function deleteStep(index) { if(confirm("Delete this step?")) { const w = getActiveWorkflow(); w.steps.splice(index, 1); saveData(); renderEditor(); } }
+
         window.app = {
-            switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, exportPDF,
+            switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, 
             openAuthModal, closeAuthModal, toggleAuthMode, handleAuthSubmit, handleGuestLogin, doLogout, renderAuthUI,
             switchEditWorkflow, createWorkflow, renameWorkflow, deleteWorkflow, toggleWorkflowActive,
             closeRun, startRun, goHome,
             openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold,
-            updateTrackingSettings, promptRenameMember, updateAssignee, updateHouseholdName,
+            updateTrackingSettings, promptRenameMember, updateHouseholdName,
             addCommitment, updateCommitment, deleteCommitment,
             organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
             insertStepAfter, insertStepBefore, resetTarget, toggleAssignee, setAssignee,
-            openPrintSetup, generatePDF
+            openPrintSetup, generatePDF, renderTrackingView, toggleHabitCircle, markDoneAndNext
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
