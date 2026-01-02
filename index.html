@@ -51,7 +51,7 @@
 
             #print-view { 
                 display: block !important; 
-                position: static !important; /* Changed from absolute to static to fix empty page issue */
+                position: static !important;
                 width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
@@ -146,13 +146,15 @@
             background: white;
             color: #0f172a;
             width: 210mm;
-            min-height: 297mm;
+            /* Removed min-height to allow natural flow and prevent blank pages */
             margin: 0 auto;
             padding: 10mm;
         }
-        .mode-print .tracker-section { border: 2px solid #0f172a; margin-bottom: 2rem; page-break-inside: avoid; }
+        /* UPDATED: Removed page-break-inside: avoid from main section to allow splitting */
+        .mode-print .tracker-section { border: 2px solid #0f172a; margin-bottom: 2rem; display: block; }
         .mode-print .section-header { background: #0f172a; color: white; }
-        .mode-print .row { border-bottom: 1px solid #cbd5e1; }
+        /* UPDATED: Added page-break-inside: avoid to rows to keep tasks intact */
+        .mode-print .row { border-bottom: 1px solid #cbd5e1; page-break-inside: avoid; }
         .mode-print .cell-habit { border-right: 2px solid #0f172a; }
         .mode-print .cell-habit.bg-alt { background-color: #f8fafc; }
         .mode-print .lane { border-bottom: 1px solid #e2e8f0; }
@@ -1018,6 +1020,10 @@
             if(link) link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
         }
 
+        function toKebabCase(str) {
+            return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        }
+
         function validateState() {
             if (state.workflow && Array.isArray(state.workflow) && !state.workflows) {
                 state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: state.workflow }];
@@ -1601,8 +1607,18 @@
             `;
 
             // Filter active workflows based on user preference
-            const activeWorkflows = state.workflows.filter(wf => isWorkflowActiveForUser(wf.id));
+            let activeWorkflows = state.workflows.filter(wf => isWorkflowActiveForUser(wf.id));
             
+            // UPDATED: Apply Sort from Dashboard Order
+            if (state.userPrefs.dashboardOrder && state.userPrefs.dashboardOrder.length > 0) {
+                const orderMap = new Map(state.userPrefs.dashboardOrder.map((id, index) => [id, index]));
+                activeWorkflows.sort((a, b) => {
+                    const idxA = orderMap.has(a.id) ? orderMap.get(a.id) : 9999;
+                    const idxB = orderMap.has(b.id) ? orderMap.get(b.id) : 9999;
+                    return idxA - idxB;
+                });
+            }
+
             activeWorkflows.forEach(wf => {
                 visited.clear();
                 const stepsMap = new Map(wf.steps.map(s => [s.id, s]));
@@ -2031,14 +2047,59 @@
             lucide.createIcons();
         }
 
+        // UPDATED: Logic for auto-id and auto-link updates
         function updateStep(index, field, value) { 
             const w = getActiveWorkflow(); 
-            w.steps[index][field] = value; 
+            const step = w.steps[index];
+            
+            // Auto-update ID logic
+            if (field === 'text') {
+                const oldSlug = toKebabCase(step.text);
+                // Check if ID is default (step-...) or matches the old text slug
+                const isDefaultId = step.id.startsWith('step-') || step.id === oldSlug;
+                const newSlug = toKebabCase(value);
+                
+                // If it was a default ID and we have a valid new slug that is unique, update it
+                if (isDefaultId && newSlug && newSlug.length > 0 && !w.steps.some(s => s.id === newSlug)) {
+                     const oldId = step.id;
+                     step.id = newSlug;
+                     
+                     // Update references in entire workflow
+                     w.steps.forEach(s => {
+                         if(s.next === oldId) s.next = newSlug;
+                         if(s.nextIfYes === oldId) s.nextIfYes = newSlug;
+                         if(s.nextIfNo === oldId) s.nextIfNo = newSlug;
+                     });
+                }
+            }
+
+            step[field] = value; 
             saveData(); 
-            // FIX: Re-render if type, text, or id changes so dropdowns update immediately
             if(field === 'type' || field === 'text' || field === 'id') renderEditor(); 
         }
-        function addStep() { const w = getActiveWorkflow(); const newId = "step-" + Math.floor(Math.random() * 10000); w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" }); saveData(); renderEditor(); setTimeout(() => { const list = document.getElementById('editor-list'); list.lastElementChild?.scrollIntoView({ behavior: 'smooth' }); }, 100); }
+
+        function addStep() { 
+            const w = getActiveWorkflow(); 
+            const lastStep = w.steps[w.steps.length - 1];
+            const newId = "step-" + Math.floor(Math.random() * 10000); 
+            
+            w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" }); 
+            
+            // UPDATED: Auto-link logic for appending at the end
+            if (lastStep && lastStep.type === 'task' && !lastStep.next) {
+                if(confirm(`Link previous step "${lastStep.text}" to this new step?`)) {
+                    lastStep.next = newId;
+                }
+            }
+            
+            saveData(); 
+            renderEditor(); 
+            setTimeout(() => { 
+                const list = document.getElementById('editor-list'); 
+                list.lastElementChild?.scrollIntoView({ behavior: 'smooth' }); 
+            }, 100); 
+        }
+
         function deleteStep(index) { if(confirm("Delete this step?")) { const w = getActiveWorkflow(); w.steps.splice(index, 1); saveData(); renderEditor(); } }
 
         window.app = {
