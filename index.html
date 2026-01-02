@@ -153,8 +153,24 @@
         /* UPDATED: Removed page-break-inside: avoid from main section to allow splitting */
         .mode-print .tracker-section { border: 2px solid #0f172a; margin-bottom: 2rem; display: block; }
         .mode-print .section-header { background: #0f172a; color: white; }
-        /* UPDATED: Added page-break-inside: avoid to rows to keep tasks intact */
-        .mode-print .row { border-bottom: 1px solid #cbd5e1; page-break-inside: avoid; }
+        
+        /* UPDATED: Print Layout Logic for Habits */
+        .mode-print .row,
+        .mode-print .fork-row { 
+            border-bottom: 1px solid #cbd5e1; 
+            /* Add top border and negative margin to ensure lines appear at top/bottom of pages when split */
+            border-top: 1px solid #cbd5e1;
+            margin-top: -1px;
+            /* Prevent breaking a single habit across pages */
+            page-break-inside: avoid; 
+            break-inside: avoid;
+        }
+        
+        /* Fork Row Styling for Print */
+        .mode-print .fork-row {
+            padding: 0.75rem;
+        }
+
         .mode-print .cell-habit { border-right: 2px solid #0f172a; }
         .mode-print .cell-habit.bg-alt { background-color: #f8fafc; }
         .mode-print .lane { border-bottom: 1px solid #e2e8f0; }
@@ -1512,8 +1528,9 @@
                         });
                         innerContent += `</div>`;
                     }
+                    // UPDATED: Use class fork-row for print styling target
                     return `
-                    <div class="border-b border-opacity-20 p-3">
+                    <div class="fork-row">
                         <div class="font-bold text-sm leading-tight">${step.text}</div>
                         ${renderAssigneeBadge(step.assignees)}
                         ${targetText}
