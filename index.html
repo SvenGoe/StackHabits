@@ -40,8 +40,6 @@
                 background: white !important; 
                 color: #0f172a !important; 
                 overflow: visible !important;
-                margin: 0 !important;
-                padding: 0 !important;
             }
             
             /* Hide everything direct child of body except print-view */
@@ -51,20 +49,13 @@
 
             #print-view { 
                 display: block !important; 
-                position: static !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
                 background: white;
-            }
-            
-            /* Reset page constraints for print to allow flow */
-            .mode-print .page {
-                width: 100% !important;
-                min-height: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                border: none !important;
             }
 
             /* Ensure background colors print */
@@ -125,10 +116,6 @@
             opacity: 0.4;
             background-color: #4f46e5; /* Indigo-600 */
         }
-        
-        /* Cursor for sortable items */
-        .cursor-grab { cursor: grab; }
-        .cursor-grabbing { cursor: grabbing; }
 
         /* --- TRACKER SHARED STYLES --- */
         
@@ -146,31 +133,13 @@
             background: white;
             color: #0f172a;
             width: 210mm;
-            /* Removed min-height to allow natural flow and prevent blank pages */
+            min-height: 297mm;
             margin: 0 auto;
             padding: 10mm;
         }
-        /* UPDATED: Removed page-break-inside: avoid from main section to allow splitting */
-        .mode-print .tracker-section { border: 2px solid #0f172a; margin-bottom: 2rem; display: block; }
+        .mode-print .tracker-section { border: 2px solid #0f172a; margin-bottom: 2rem; page-break-inside: avoid; }
         .mode-print .section-header { background: #0f172a; color: white; }
-        
-        /* UPDATED: Print Layout Logic for Habits */
-        .mode-print .row,
-        .mode-print .fork-row { 
-            border-bottom: 1px solid #cbd5e1; 
-            /* Add top border and negative margin to ensure lines appear at top/bottom of pages when split */
-            border-top: 1px solid #cbd5e1;
-            margin-top: -1px;
-            /* Prevent breaking a single habit across pages */
-            page-break-inside: avoid; 
-            break-inside: avoid;
-        }
-        
-        /* Fork Row Styling for Print */
-        .mode-print .fork-row {
-            padding: 0.75rem;
-        }
-
+        .mode-print .row { border-bottom: 1px solid #cbd5e1; }
         .mode-print .cell-habit { border-right: 2px solid #0f172a; }
         .mode-print .cell-habit.bg-alt { background-color: #f8fafc; }
         .mode-print .lane { border-bottom: 1px solid #e2e8f0; }
@@ -236,10 +205,7 @@
         }
 
         .row { display: flex; }
-        
-        /* FIX: Removed .row:last-child { border-bottom: none; } 
-           This ensures lines are drawn even if an element is technically the last child in a sub-block.
-        */
+        .row:last-child { border-bottom: none; }
 
         .cell-habit {
             width: 35%;
@@ -260,7 +226,7 @@
         .cell-checks.block { display: block; padding: 0; }
         
         .lane { display: flex; align-items: center; gap: 8px; padding: 8px; }
-        /* FIX: Removed .lane:last-child { border-bottom: none; } */
+        .lane:last-child { border-bottom: none; }
 
         .circle {
             width: 24px; 
@@ -771,8 +737,7 @@
             trackingLog: {}, // { "YYYY-MM": { "habitId": count, "reflections": {wins, focus} } }
             userPrefs: {
                 displayName: "",
-                hiddenWorkflows: [], // Array of workflow IDs that are inactive for this user
-                dashboardOrder: [] // NEW: Array of workflow IDs defining sort order
+                hiddenWorkflows: [] // Array of workflow IDs that are inactive for this user
             },
             isAuthModeLogin: true,
             isOnline: false,
@@ -805,7 +770,7 @@
                     state.householdId = null;
                     state.householdName = null;
                     state.householdMembers = {};
-                    state.userPrefs = { displayName: "", hiddenWorkflows: [], dashboardOrder: [] };
+                    state.userPrefs = { displayName: "", hiddenWorkflows: [] };
 
                     if (user) {
                         console.log("User logged in:", user.uid);
@@ -987,6 +952,11 @@
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
                 if(!forceCloud) showToast("Saved Locally");
             }
+            // If in tracker view, re-render to show updates
+            if(!document.getElementById('view-track').classList.contains('hidden')) {
+                // Don't full re-render if typing to avoid focus loss, but sometimes needed
+                // We handle input focus loss in the input event handler itself
+            }
         }
         
         function pruneHistory() {
@@ -1036,10 +1006,6 @@
             if(link) link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
         }
 
-        function toKebabCase(str) {
-            return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        }
-
         function validateState() {
             if (state.workflow && Array.isArray(state.workflow) && !state.workflows) {
                 state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: state.workflow }];
@@ -1053,9 +1019,8 @@
             }
             if(!state.commitments) state.commitments = [];
             if(!state.trackingLog) state.trackingLog = {};
-            if(!state.userPrefs) state.userPrefs = { displayName: "", hiddenWorkflows: [], dashboardOrder: [] };
+            if(!state.userPrefs) state.userPrefs = { displayName: "", hiddenWorkflows: [] };
             if(!state.userPrefs.hiddenWorkflows) state.userPrefs.hiddenWorkflows = [];
-            if(!state.userPrefs.dashboardOrder) state.userPrefs.dashboardOrder = [];
         }
 
         function getActiveWorkflow() {
@@ -1066,6 +1031,9 @@
             if (state.userPrefs.hiddenWorkflows && state.userPrefs.hiddenWorkflows.includes(workflowId)) {
                 return false;
             }
+            // Fallback for legacy local mode or non-user workflows check the workflow object itself
+            // But user preference overrides it if set. 
+            // Since we default to showing, if it's not in hidden array, it's active.
             return true;
         }
 
@@ -1087,15 +1055,11 @@
             } else {
                 state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
             }
-            
-            // Local mode: Load prefs from local storage too if we wanted to support it, 
-            // but for now local mode resets prefs on load or uses transient memory.
-            // Let's check if we can persist it separately or just keep transient.
-            // For now, transient is fine as per original logic, but we init the array.
-            state.userPrefs = { displayName: "Local User", hiddenWorkflows: [], dashboardOrder: [] };
+            // Local mode simulates user prefs in memory for session or localStorage if extended
+            state.userPrefs = { displayName: "Local User", hiddenWorkflows: [] };
         }
 
-        // --- HOUSEHOLD & PROFILE LOGIC ---
+        // --- HOUSEHOLD LOGIC ---
         async function loadUserProfile(uid) {
             try {
                 const docRef = doc(db, "artifacts", appId, "users", uid, "data", "profile");
@@ -1106,7 +1070,6 @@
                     state.trackingMode = data.trackingMode || 'disabled';
                     state.userPrefs.displayName = data.displayName || "";
                     state.userPrefs.hiddenWorkflows = data.hiddenWorkflows || [];
-                    state.userPrefs.dashboardOrder = data.dashboardOrder || [];
                 }
             } catch (e) {
                 console.error("Error loading profile", e);
@@ -1119,8 +1082,7 @@
                     const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
                     await setDoc(docRef, { 
                         displayName: state.userPrefs.displayName,
-                        hiddenWorkflows: state.userPrefs.hiddenWorkflows,
-                        dashboardOrder: state.userPrefs.dashboardOrder
+                        hiddenWorkflows: state.userPrefs.hiddenWorkflows
                     }, { merge: true });
                 } catch (e) { console.error("Error saving user prefs", e); }
             }
@@ -1528,9 +1490,8 @@
                         });
                         innerContent += `</div>`;
                     }
-                    // UPDATED: Use class fork-row for print styling target
                     return `
-                    <div class="fork-row">
+                    <div class="border-b border-opacity-20 last:border-b-0 p-3">
                         <div class="font-bold text-sm leading-tight">${step.text}</div>
                         ${renderAssigneeBadge(step.assignees)}
                         ${targetText}
@@ -1624,18 +1585,8 @@
             `;
 
             // Filter active workflows based on user preference
-            let activeWorkflows = state.workflows.filter(wf => isWorkflowActiveForUser(wf.id));
+            const activeWorkflows = state.workflows.filter(wf => isWorkflowActiveForUser(wf.id));
             
-            // UPDATED: Apply Sort from Dashboard Order
-            if (state.userPrefs.dashboardOrder && state.userPrefs.dashboardOrder.length > 0) {
-                const orderMap = new Map(state.userPrefs.dashboardOrder.map((id, index) => [id, index]));
-                activeWorkflows.sort((a, b) => {
-                    const idxA = orderMap.has(a.id) ? orderMap.get(a.id) : 9999;
-                    const idxB = orderMap.has(b.id) ? orderMap.get(b.id) : 9999;
-                    return idxA - idxB;
-                });
-            }
-
             activeWorkflows.forEach(wf => {
                 visited.clear();
                 const stepsMap = new Map(wf.steps.map(s => [s.id, s]));
@@ -1734,19 +1685,8 @@
             if (sortableInstance) sortableInstance.destroy();
             container.innerHTML = '';
             
-            // 1. Get Active Workflows
-            let activeWorkflows = state.workflows.filter(w => isWorkflowActiveForUser(w.id));
-
-            // 2. Sort based on user preference (dashboardOrder)
-            if (state.userPrefs.dashboardOrder && state.userPrefs.dashboardOrder.length > 0) {
-                const orderMap = new Map(state.userPrefs.dashboardOrder.map((id, index) => [id, index]));
-                // Sort: if both have order, compare index. if one has order, it comes first. if neither, keep original.
-                activeWorkflows.sort((a, b) => {
-                    const idxA = orderMap.has(a.id) ? orderMap.get(a.id) : 9999;
-                    const idxB = orderMap.has(b.id) ? orderMap.get(b.id) : 9999;
-                    return idxA - idxB;
-                });
-            }
+            // Filter only active workflows for this user
+            const activeWorkflows = state.workflows.filter(w => isWorkflowActiveForUser(w.id));
 
             if (activeWorkflows.length === 0) {
                 container.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">No active workflows.<br>Go to Edit to enable one.</div>';
@@ -1768,13 +1708,8 @@
 
                 const card = document.createElement('div');
                 card.setAttribute('data-id', w.id);
-                // Added cursor-grab for drag indication
-                card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group select-none cursor-grab active:cursor-grabbing";
-                card.onclick = (e) => { 
-                    // Prevent click if dragging happened (Sortable handles this via 'moved' class usually, but basic check is safer)
-                    if(card.classList.contains('sortable-drag')) return; 
-                    startRun(w.id); 
-                };
+                card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group cursor-pointer select-none";
+                card.onclick = (e) => { if(card.classList.contains('sortable-drag')) return; startRun(w.id); };
                 card.innerHTML = `
                     <div class="flex items-start justify-between mb-4 pointer-events-none">
                         <div class="p-3 bg-indigo-500/10 rounded-lg text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
@@ -1789,19 +1724,9 @@
             });
             lucide.createIcons();
 
-            // 3. Initialize Drag & Drop
-            sortableInstance = new Sortable(container, {
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                delay: 100, // Small delay to prevent accidental drags when trying to click
-                delayOnTouchOnly: true, // Only delay on touch devices
-                onEnd: (evt) => {
-                    // Update order array
-                    const newOrder = Array.from(container.children).map(el => el.getAttribute('data-id'));
-                    state.userPrefs.dashboardOrder = newOrder;
-                    saveUserPrefs(); // Save to cloud/local
-                }
-            });
+            // Only allow reordering if using local storage (for now, to avoid conflicting with user prefs logic)
+            // Or only if we are storing order in workflows array which is shared.
+            // Simplified: Drag and drop disabled for now to simplify "active/inactive" logic separation
         }
 
         // --- EDITOR RENDER & UI HELPERS ---
@@ -2064,59 +1989,8 @@
             lucide.createIcons();
         }
 
-        // UPDATED: Logic for auto-id and auto-link updates
-        function updateStep(index, field, value) { 
-            const w = getActiveWorkflow(); 
-            const step = w.steps[index];
-            
-            // Auto-update ID logic
-            if (field === 'text') {
-                const oldSlug = toKebabCase(step.text);
-                // Check if ID is default (step-...) or matches the old text slug
-                const isDefaultId = step.id.startsWith('step-') || step.id === oldSlug;
-                const newSlug = toKebabCase(value);
-                
-                // If it was a default ID and we have a valid new slug that is unique, update it
-                if (isDefaultId && newSlug && newSlug.length > 0 && !w.steps.some(s => s.id === newSlug)) {
-                     const oldId = step.id;
-                     step.id = newSlug;
-                     
-                     // Update references in entire workflow
-                     w.steps.forEach(s => {
-                         if(s.next === oldId) s.next = newSlug;
-                         if(s.nextIfYes === oldId) s.nextIfYes = newSlug;
-                         if(s.nextIfNo === oldId) s.nextIfNo = newSlug;
-                     });
-                }
-            }
-
-            step[field] = value; 
-            saveData(); 
-            if(field === 'type' || field === 'text' || field === 'id') renderEditor(); 
-        }
-
-        function addStep() { 
-            const w = getActiveWorkflow(); 
-            const lastStep = w.steps[w.steps.length - 1];
-            const newId = "step-" + Math.floor(Math.random() * 10000); 
-            
-            w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" }); 
-            
-            // UPDATED: Auto-link logic for appending at the end
-            if (lastStep && lastStep.type === 'task' && !lastStep.next) {
-                if(confirm(`Link previous step "${lastStep.text}" to this new step?`)) {
-                    lastStep.next = newId;
-                }
-            }
-            
-            saveData(); 
-            renderEditor(); 
-            setTimeout(() => { 
-                const list = document.getElementById('editor-list'); 
-                list.lastElementChild?.scrollIntoView({ behavior: 'smooth' }); 
-            }, 100); 
-        }
-
+        function updateStep(index, field, value) { const w = getActiveWorkflow(); w.steps[index][field] = value; saveData(); if(field === 'type') renderEditor(); }
+        function addStep() { const w = getActiveWorkflow(); const newId = "step-" + Math.floor(Math.random() * 10000); w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" }); saveData(); renderEditor(); setTimeout(() => { const list = document.getElementById('editor-list'); list.lastElementChild?.scrollIntoView({ behavior: 'smooth' }); }, 100); }
         function deleteStep(index) { if(confirm("Delete this step?")) { const w = getActiveWorkflow(); w.steps.splice(index, 1); saveData(); renderEditor(); } }
 
         window.app = {
