@@ -59,19 +59,26 @@
             }
             
             /* Reset page constraints for print to allow flow */
-            .mode-print .page {
+            .mode-print .print-page {
                 width: 100% !important;
-                min-height: 0 !important;
+                height: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 border: none !important;
+                box-shadow: none !important;
+                break-after: page;
+                page-break-after: always;
+            }
+            .mode-print .print-page:last-child {
+                break-after: auto;
+                page-break-after: auto;
             }
 
             /* Ensure background colors print */
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             
-            /* Margin on page */
-            @page { margin: 10mm; } 
+            /* Margin on page handled by the div padding */
+            @page { margin: 0; } 
         }
         
         .print-only { display: none; }
@@ -143,14 +150,27 @@
 
         /* Print Mode Specifics */
         .mode-print .page {
+            /* This is now the "Staging" page style, actual print pages use .print-page */
             background: white;
             color: #0f172a;
             width: 210mm;
-            /* Removed min-height to allow natural flow and prevent blank pages */
             margin: 0 auto;
             padding: 10mm;
         }
-        /* UPDATED: Removed page-break-inside: avoid from main section to allow splitting */
+        
+        /* The pagination container */
+        .mode-print .print-page {
+            background: white;
+            color: #0f172a;
+            width: 210mm;
+            height: 296mm; /* A4 Height approx */
+            margin: 0 auto 20px auto; /* Margin for screen preview */
+            padding: 10mm;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Drop shadow for preview */
+        }
+
         .mode-print .tracker-section { border: 2px solid #0f172a; margin-bottom: 2rem; display: block; }
         .mode-print .section-header { background: #0f172a; color: white; }
         
@@ -158,12 +178,20 @@
         .mode-print .row,
         .mode-print .fork-row { 
             border-bottom: 1px solid #cbd5e1; 
-            /* Add top border and negative margin to ensure lines appear at top/bottom of pages when split */
             border-top: 1px solid #cbd5e1;
             margin-top: -1px;
-            /* Prevent breaking a single habit across pages */
-            page-break-inside: avoid; 
-            break-inside: avoid;
+            /* Allow breaking because we handle it manually now */
+            page-break-inside: auto; 
+            break-inside: auto;
+        }
+        
+        /* Visual helpers for split workflows */
+        .mode-print .split-bottom {
+            border-bottom: 4px solid #94a3b8 !important; /* Thick grey line */
+        }
+        .mode-print .split-top {
+            border-top: 4px solid #94a3b8 !important; /* Thick grey line */
+            margin-top: 0 !important;
         }
         
         /* Fork Row Styling for Print */
@@ -237,10 +265,6 @@
 
         .row { display: flex; }
         
-        /* FIX: Removed .row:last-child { border-bottom: none; } 
-           This ensures lines are drawn even if an element is technically the last child in a sub-block.
-        */
-
         .cell-habit {
             width: 35%;
             padding: 10px;
@@ -260,7 +284,6 @@
         .cell-checks.block { display: block; padding: 0; }
         
         .lane { display: flex; align-items: center; gap: 8px; padding: 8px; }
-        /* FIX: Removed .lane:last-child { border-bottom: none; } */
 
         .circle {
             width: 24px; 
@@ -1416,7 +1439,7 @@
             lucide.createIcons();
         }
 
-        function generatePDF() {
+        async function generatePDF() {
             document.getElementById('print-setup-modal').classList.add('hidden');
             const monthIdx = parseInt(document.getElementById('print-month-select').value);
             const year = parseInt(document.getElementById('print-year-select').value);
@@ -1426,7 +1449,149 @@
             const container = document.getElementById('print-view');
             container.innerHTML = generateTrackerHTML(date, skipDays, false);
             lucide.createIcons();
-            setTimeout(() => window.print(), 800);
+            
+            // Run pagination logic before printing
+            await paginate();
+            
+            setTimeout(() => window.print(), 500);
+        }
+        
+        // --- SMART PAGINATION ENGINE ---
+        async function paginate() {
+            const container = document.getElementById('print-view');
+            
+            // 1. Create Staging Area (Invisible)
+            const staging = document.createElement('div');
+            staging.className = 'print-staging mode-print';
+            staging.style.position = 'absolute';
+            staging.style.top = '-9999px';
+            staging.style.width = '210mm'; // Standard print width
+            staging.innerHTML = container.innerHTML;
+            document.body.appendChild(staging);
+
+            container.innerHTML = ''; // Clear actual view
+            
+            // Allow DOM to settle for measurements
+            await new Promise(r => setTimeout(r, 50));
+
+            const MAX_H = 1050; // Safe Printable Height in px (approx 277mm)
+            let pages = [];
+            
+            // Helper to create a new page
+            const createPageDiv = () => {
+                const div = document.createElement('div');
+                div.className = 'print-page mode-print';
+                return div;
+            };
+
+            let currentPage = createPageDiv();
+            let currentH = 0;
+
+            const pushPage = () => {
+                pages.push(currentPage);
+                currentPage = createPageDiv();
+                currentH = 0; // Reset height counter
+            };
+
+            // 2. Extract Elements
+            // First, get the main title header from the 'page' wrapper in staging
+            const mainHeader = staging.querySelector('.page > .flex'); 
+            if(mainHeader) {
+                currentPage.appendChild(mainHeader.cloneNode(true));
+                currentH += (mainHeader.offsetHeight + 40); // + margin
+            }
+
+            // Get all workflows
+            const workflows = Array.from(staging.querySelectorAll('.tracker-section'));
+            
+            // 3. Process Content
+            for (const wf of workflows) {
+                const header = wf.querySelector('.section-header');
+                
+                // --- 40% RULE ---
+                // Before starting a new workflow, check if we have < 40% space left
+                // MAX_H * 0.4 = 420px. If remaining < 420px, push new page.
+                const remainingSpace = MAX_H - currentH;
+                if (remainingSpace < (MAX_H * 0.4)) {
+                    pushPage();
+                }
+
+                // Create a container for this workflow on the current page
+                let wfContainer = wf.cloneNode(false); // shallow clone (wrapper only)
+                wfContainer.style.marginBottom = '20px';
+                
+                currentPage.appendChild(wfContainer);
+                wfContainer.appendChild(header.cloneNode(true));
+                currentH += header.offsetHeight;
+                
+                // Get all rows/blocks inside this workflow (exclude header)
+                // We assume children are .row, .fork-container, or .fork-decision-title (part of recursion)
+                // Actually, the recursion in generateTrackerHTML outputs a flat list of siblings inside tracker-section?
+                // No, renderFlow outputs nested fork-containers.
+                // But top level items inside tracker-section are either .row or .fork-decision-title + .fork-container
+                
+                // We need to iterate over direct children of the workflow body
+                // The current HTML structure puts everything as direct children of tracker-section
+                const children = Array.from(wf.children).filter(c => !c.classList.contains('section-header'));
+                
+                for (let i = 0; i < children.length; i++) {
+                    const child = children[i];
+                    const childH = child.offsetHeight;
+                    
+                    // Check if child fits
+                    if (currentH + childH > MAX_H) {
+                        // --- SPLIT LOGIC ---
+                        
+                        // 1. Style the previous element (last child of current wfContainer)
+                        if (wfContainer.lastElementChild && !wfContainer.lastElementChild.classList.contains('section-header')) {
+                             wfContainer.lastElementChild.classList.add('split-bottom');
+                        }
+                        
+                        // 2. Push Page
+                        pushPage();
+                        
+                        // 3. Create new container on new page
+                        wfContainer = wf.cloneNode(false);
+                        wfContainer.style.borderTop = 'none'; // Continuation look
+                        wfContainer.style.marginTop = '0';
+                        
+                        currentPage.appendChild(wfContainer);
+                        // Do NOT add header again
+                        
+                        // 4. Style the current element (first on new page)
+                        const clonedChild = child.cloneNode(true);
+                        clonedChild.classList.add('split-top');
+                        
+                        wfContainer.appendChild(clonedChild);
+                        currentH += childH;
+                        
+                    } else {
+                        // Fits
+                        wfContainer.appendChild(child.cloneNode(true));
+                        currentH += childH;
+                    }
+                }
+            }
+            
+            // Reflections & Footer
+            const reflectionContainer = staging.querySelector('.reflection-container');
+            const footer = staging.querySelector('.mt-8'); // Footer div
+
+            if (reflectionContainer) {
+                if (currentH + 250 > MAX_H) pushPage();
+                currentPage.appendChild(reflectionContainer.cloneNode(true));
+                currentH += 200;
+            }
+            if (footer) {
+                if (currentH + 50 > MAX_H) pushPage();
+                currentPage.appendChild(footer.cloneNode(true));
+            }
+            
+            pages.push(currentPage);
+
+            // 4. Render back to View
+            pages.forEach(p => container.appendChild(p));
+            document.body.removeChild(staging);
         }
 
         function generateTrackerHTML(printDate, skipDays, isWebMode) {
@@ -1593,12 +1758,13 @@
                     if(step.type === 'end') break;
 
                     if(step.type === 'decision') {
-                        html += `<div class="border-b border-opacity-20"><div class="fork-decision-title"><i data-lucide="git-branch" class="w-4 h-4"></i> Decision: ${step.text}</div>`;
+                        // NOTE: For pagination, these elements are siblings in the container
+                        html += `<div class="border-b border-opacity-20 fork-decision-title"><i data-lucide="git-branch" class="w-4 h-4"></i> Decision: ${step.text}</div>`;
                         const convergeId = findConvergence(step.nextIfYes, step.nextIfNo, stepsMap);
                         html += `<div class="fork-container">`;
                         html += `<div class="fork-column"><div class="fork-header text-emerald-600">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}</div>`;
                         html += `<div class="fork-column"><div class="fork-header text-amber-600">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
-                        html += `</div></div>`; 
+                        html += `</div>`; 
                         curr = convergeId;
                         if(curr) visited.delete(curr); 
                     } else {
@@ -1626,7 +1792,7 @@
             // Filter active workflows based on user preference
             let activeWorkflows = state.workflows.filter(wf => isWorkflowActiveForUser(wf.id));
             
-            // UPDATED: Apply Sort from Dashboard Order
+            // Apply Sort from Dashboard Order
             if (state.userPrefs.dashboardOrder && state.userPrefs.dashboardOrder.length > 0) {
                 const orderMap = new Map(state.userPrefs.dashboardOrder.map((id, index) => [id, index]));
                 activeWorkflows.sort((a, b) => {
@@ -1697,18 +1863,13 @@
         function toggleHabitCircle(key, id, value) {
             if(!state.trackingLog[key]) state.trackingLog[key] = {};
             const current = state.trackingLog[key][id] || 0;
-            
-            // If clicking the exact current value, toggle off (decrement to prev)
-            // If clicking a higher value, fill up to that value
-            // If clicking a lower value, reduce to that value
             if (current === value) {
                 state.trackingLog[key][id] = value - 1;
             } else {
                 state.trackingLog[key][id] = value;
             }
-            
             saveData();
-            renderTrackingView(); // Re-render to show animation
+            renderTrackingView(); 
         }
 
         function showToast(msg, isError = false) {
@@ -1734,13 +1895,10 @@
             if (sortableInstance) sortableInstance.destroy();
             container.innerHTML = '';
             
-            // 1. Get Active Workflows
             let activeWorkflows = state.workflows.filter(w => isWorkflowActiveForUser(w.id));
 
-            // 2. Sort based on user preference (dashboardOrder)
             if (state.userPrefs.dashboardOrder && state.userPrefs.dashboardOrder.length > 0) {
                 const orderMap = new Map(state.userPrefs.dashboardOrder.map((id, index) => [id, index]));
-                // Sort: if both have order, compare index. if one has order, it comes first. if neither, keep original.
                 activeWorkflows.sort((a, b) => {
                     const idxA = orderMap.has(a.id) ? orderMap.get(a.id) : 9999;
                     const idxB = orderMap.has(b.id) ? orderMap.get(b.id) : 9999;
@@ -1754,12 +1912,8 @@
             }
 
             activeWorkflows.forEach(w => {
-                // Count steps logic update:
-                // Include steps where type is "Task" 
-                // AND (Assignees is empty OR Assignees includes current user)
                 const stepCount = w.steps.filter(s => {
                     if (s.type !== 'task') return false;
-                    // If assignees exist and user is logged in but not in list, exclude
                     if (state.householdId && state.user && s.assignees && s.assignees.length > 0 && !s.assignees.includes(state.user.uid)) {
                         return false;
                     }
@@ -1768,10 +1922,8 @@
 
                 const card = document.createElement('div');
                 card.setAttribute('data-id', w.id);
-                // Added cursor-grab for drag indication
                 card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group select-none cursor-grab active:cursor-grabbing";
                 card.onclick = (e) => { 
-                    // Prevent click if dragging happened (Sortable handles this via 'moved' class usually, but basic check is safer)
                     if(card.classList.contains('sortable-drag')) return; 
                     startRun(w.id); 
                 };
@@ -1789,17 +1941,15 @@
             });
             lucide.createIcons();
 
-            // 3. Initialize Drag & Drop
             sortableInstance = new Sortable(container, {
                 animation: 150,
                 ghostClass: 'sortable-ghost',
-                delay: 100, // Small delay to prevent accidental drags when trying to click
-                delayOnTouchOnly: true, // Only delay on touch devices
+                delay: 100, 
+                delayOnTouchOnly: true, 
                 onEnd: (evt) => {
-                    // Update order array
                     const newOrder = Array.from(container.children).map(el => el.getAttribute('data-id'));
                     state.userPrefs.dashboardOrder = newOrder;
-                    saveUserPrefs(); // Save to cloud/local
+                    saveUserPrefs(); 
                 }
             });
         }
@@ -1813,7 +1963,6 @@
             if (state.isLoadingAuth) { statusText.innerHTML = '<span class="animate-pulse">...</span>'; userBtn.classList.remove('text-indigo-400'); return; }
 
             if (state.user) {
-                // Priority: User Profile Display Name > Household Member Name > Email
                 let displayName = state.userPrefs.displayName;
                 if (!displayName && state.householdId && state.householdMembers[state.user.uid] && state.householdMembers[state.user.uid].name) {
                     displayName = state.householdMembers[state.user.uid].name;
@@ -1911,21 +2060,14 @@
         
         async function toggleWorkflowActive() { 
             const w = getActiveWorkflow(); 
-            // w.active on the shared object is no longer the source of truth for visibility
-            
-            // Check current status
             const isCurrentlyActive = isWorkflowActiveForUser(w.id);
-            
             if (isCurrentlyActive) {
-                // Make inactive -> Add to hidden list
                 if (!state.userPrefs.hiddenWorkflows.includes(w.id)) {
                     state.userPrefs.hiddenWorkflows.push(w.id);
                 }
             } else {
-                // Make active -> Remove from hidden list
                 state.userPrefs.hiddenWorkflows = state.userPrefs.hiddenWorkflows.filter(id => id !== w.id);
             }
-            
             await saveUserPrefs();
             renderEditor(); 
         }
@@ -2010,9 +2152,7 @@
             selector.innerHTML = ''; 
             state.workflows.forEach(w => { 
                 const isActive = isWorkflowActiveForUser(w.id);
-                // Updated Logic for Inactive Text:
                 const inactiveLabel = state.householdId ? '(Inactive for You)' : '(Inactive)';
-                
                 const opt = document.createElement('option'); 
                 opt.value = w.id; 
                 opt.text = `${w.name} ${!isActive ? inactiveLabel : ''}`; 
@@ -2064,24 +2204,16 @@
             lucide.createIcons();
         }
 
-        // UPDATED: Logic for auto-id and auto-link updates
         function updateStep(index, field, value) { 
             const w = getActiveWorkflow(); 
             const step = w.steps[index];
-            
-            // Auto-update ID logic
             if (field === 'text') {
                 const oldSlug = toKebabCase(step.text);
-                // Check if ID is default (step-...) or matches the old text slug
                 const isDefaultId = step.id.startsWith('step-') || step.id === oldSlug;
                 const newSlug = toKebabCase(value);
-                
-                // If it was a default ID and we have a valid new slug that is unique, update it
                 if (isDefaultId && newSlug && newSlug.length > 0 && !w.steps.some(s => s.id === newSlug)) {
                      const oldId = step.id;
                      step.id = newSlug;
-                     
-                     // Update references in entire workflow
                      w.steps.forEach(s => {
                          if(s.next === oldId) s.next = newSlug;
                          if(s.nextIfYes === oldId) s.nextIfYes = newSlug;
@@ -2089,7 +2221,6 @@
                      });
                 }
             }
-
             step[field] = value; 
             saveData(); 
             if(field === 'type' || field === 'text' || field === 'id') renderEditor(); 
@@ -2099,16 +2230,12 @@
             const w = getActiveWorkflow(); 
             const lastStep = w.steps[w.steps.length - 1];
             const newId = "step-" + Math.floor(Math.random() * 10000); 
-            
             w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" }); 
-            
-            // UPDATED: Auto-link logic for appending at the end
             if (lastStep && lastStep.type === 'task' && !lastStep.next) {
                 if(confirm(`Link previous step "${lastStep.text}" to this new step?`)) {
                     lastStep.next = newId;
                 }
             }
-            
             saveData(); 
             renderEditor(); 
             setTimeout(() => { 
