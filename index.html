@@ -214,6 +214,28 @@
         .mode-print .fork-decision-title { background: #f1f5f9; padding: 4px; font-size: 9pt; }
         .mode-print .reflection-box { border: 2px solid #cbd5e1; color: #0f172a; min-height: 100px; padding: 8px; }
 
+        /* Important Highlight Styles */
+        .habit-important .cell-habit {
+            position: relative;
+        }
+        
+        .mode-print .habit-important .cell-habit {
+            background-color: #fffbeb !important; /* amber-50 */
+            border-left: 4px solid #f59e0b;
+        }
+        .mode-print .habit-important .cell-habit .font-bold {
+            color: #b45309;
+        }
+        
+        .mode-web .habit-important .cell-habit {
+            background-color: #451a03; /* amber-950 */
+            border-left: 3px solid #f59e0b;
+        }
+        .mode-web .habit-important .cell-habit .font-bold {
+            color: #fbbf24;
+        }
+
+
         /* Web Mode Specifics (Dark) */
         .mode-web { padding-bottom: 5rem; }
         .mode-web .page {
@@ -612,6 +634,24 @@
                         </div>
                     </div>
 
+                    <!-- Privacy Setting -->
+                    <div class="bg-slate-900/30 p-3 rounded-lg border border-slate-700">
+                        <div class="text-xs text-emerald-400 uppercase font-bold mb-2">Tracking View</div>
+                        <div class="flex items-center gap-4 text-sm">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="household_privacy" value="shared" onchange="window.app.updateHouseholdPrivacy('shared')" class="accent-indigo-500">
+                                <span>Shared</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="household_privacy" value="individual" onchange="window.app.updateHouseholdPrivacy('individual')" class="accent-indigo-500">
+                                <span>Individual</span>
+                            </label>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1 italic">
+                            Individual mode hides other members' tasks in your view.
+                        </div>
+                    </div>
+
                     <!-- Members List -->
                     <div>
                         <div class="text-xs text-slate-500 uppercase font-bold mb-2">Members</div>
@@ -719,10 +759,10 @@
             <h2 class="text-xl font-bold mb-4">Workflow Guide</h2>
             <div class="text-sm text-slate-300 space-y-4">
                 <p><strong>1. Creating a Flow:</strong> Habits are linked like a chain. Every habit points to the "Next Step" ID.</p>
-                <p><strong>2. Inserting a Step:</strong> Use the <span class="text-indigo-400 font-bold">"Insert After"</span> button on an existing habit. This automatically creates a new task and rewires the connections so it fits in between.</p>
-                <p><strong>3. Branching:</strong> Change a step type to "Branch". This creates a Yes/No fork. You must specify which habit comes next for Yes and for No.</p>
-                <p><strong>4. Auto-Organize:</strong> Click "Auto-Organize" to sort the list below visually to match the actual flow order.</p>
-                <p><strong>5. Multi-Assign:</strong> Select multiple people to create tracking lanes for everyone.</p>
+                <p><strong>2. Reordering:</strong> Drag and drop steps in the editor or use the arrow buttons. The list is just for editing; the actual execution flow is determined by the "Next Step" logic links.</p>
+                <p><strong>3. Branching:</strong> Change a step type to "Branch". This creates a Yes/No fork.</p>
+                <p><strong>4. Assignments:</strong> Assign habits to specific household members. You can pause specific people or set individual targets.</p>
+                <p><strong>5. Importance:</strong> Mark key habits with the star icon to highlight them in yellow.</p>
             </div>
         </div>
     </div>
@@ -760,15 +800,15 @@
 
         // --- STATE ---
         const DEFAULT_WORKFLOW_STEPS = [
-            { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "gym-prep", type: "task", text: "Pack gym clothes", next: "protein", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "protein", type: "task", text: "Drink pre-workout", next: "go-gym", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "go-gym", type: "task", text: "Go to Gym", next: "shower", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "coffee", type: "task", text: "Brew Coffee", next: "read", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "read", type: "task", text: "Read 10 pages", next: "shower", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "shower", type: "task", text: "Take a cold shower", next: "work", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "work", type: "task", text: "Check Calendar", next: "end", assignees: [], targetCount: 1, targetPeriod: "day" },
-            { id: "end", type: "end", text: "Routine Complete!", next: null, assignees: [], targetCount: 1, targetPeriod: "day" }
+            { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
+            { id: "gym-prep", type: "task", text: "Pack gym clothes", next: "protein", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
+            { id: "protein", type: "task", text: "Drink pre-workout", next: "go-gym", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
+            { id: "go-gym", type: "task", text: "Go to Gym", next: "shower", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: true },
+            { id: "coffee", type: "task", text: "Brew Coffee", next: "read", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
+            { id: "read", type: "task", text: "Read 10 pages", next: "shower", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
+            { id: "shower", type: "task", text: "Take a cold shower", next: "work", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
+            { id: "work", type: "task", text: "Check Calendar", next: "end", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
+            { id: "end", type: "end", text: "Routine Complete!", next: null, assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false }
         ];
 
         const DEFAULT_WORKFLOWS = [
@@ -783,14 +823,15 @@
             historyStack: [],
             user: null,
             householdId: null,
-            householdName: null, 
+            householdName: null,
+            householdPrivacy: 'shared', // 'shared' or 'individual'
             householdMembers: {}, 
             trackingMode: 'disabled',
             trackingLog: {}, // { "YYYY-MM": { "habitId": count, "reflections": {wins, focus} } }
             userPrefs: {
                 displayName: "",
                 hiddenWorkflows: [], // Array of workflow IDs that are inactive for this user
-                dashboardOrder: [] // NEW: Array of workflow IDs defining sort order
+                dashboardOrder: [] 
             },
             isAuthModeLogin: true,
             isOnline: false,
@@ -798,6 +839,7 @@
         };
 
         let sortableInstance = null;
+        let stepSortableInstance = null; // New sortable for step list
 
         // --- CORE LOGIC ---
         
@@ -822,6 +864,7 @@
                     state.activeWorkflowId = null;
                     state.householdId = null;
                     state.householdName = null;
+                    state.householdPrivacy = 'shared';
                     state.householdMembers = {};
                     state.userPrefs = { displayName: "", hiddenWorkflows: [], dashboardOrder: [] };
 
@@ -834,7 +877,7 @@
                         
                         loadDataFromFirestore(user.uid).then(() => {
                             validateState();
-                            renderAuthUI(); // Render after data load to ensure display name is ready
+                            renderAuthUI(); 
                             updateTrackingUI();
                             renderDashboard();
                             closeRun();
@@ -942,6 +985,7 @@
                     if(state.householdId) {
                         if(data.members) state.householdMembers = data.members;
                         if(data.name) state.householdName = data.name;
+                        if(data.privacy) state.householdPrivacy = data.privacy;
                     }
 
                     if(data.workflows && Array.isArray(data.workflows)) {
@@ -973,15 +1017,18 @@
         }
 
         async function saveData(forceCloud = false) {
-            // Prune history older than 30 months before saving
             pruneHistory();
-
             const dataToSave = {
                 workflows: state.workflows,
                 commitments: state.commitments || [],
                 trackingLog: state.trackingLog || {},
                 updatedAt: new Date().toISOString()
             };
+            
+            // If in household, include specific fields
+            if (state.householdId) {
+                dataToSave.privacy = state.householdPrivacy || 'shared';
+            }
 
             if (state.user) {
                 try {
@@ -993,7 +1040,6 @@
                         docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "flowhabit");
                         await setDoc(docRef, dataToSave);
                     }
-                    
                     showToast("Saved");
                     updateConnectionStatus(true);
                 } catch (e) {
@@ -1014,16 +1060,12 @@
             const keys = Object.keys(state.trackingLog);
             
             keys.forEach(key => {
-                // Key format "YYYY-MM" (Month is 0-11)
                 const parts = key.split('-');
                 if (parts.length === 2) {
                     const year = parseInt(parts[0]);
                     const month = parseInt(parts[1]);
-                    
-                    // Calculate months difference
                     const diffYears = now.getFullYear() - year;
                     const diffMonths = (diffYears * 12) + (now.getMonth() - month);
-                    
                     if (diffMonths > limit) {
                         delete state.trackingLog[key];
                     }
@@ -1059,10 +1101,23 @@
         }
 
         function validateState() {
-            if (state.workflow && Array.isArray(state.workflow) && !state.workflows) {
-                state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: state.workflow }];
-                delete state.workflow;
-            }
+            // Migration Logic: Convert assignees array to assignments object
+            const migrateItem = (item) => {
+                if (item.assignees && Array.isArray(item.assignees) && !item.assignments) {
+                    item.assignments = {};
+                    item.assignees.forEach(uid => {
+                        item.assignments[uid] = { active: true, targetCount: item.targetCount || 1, targetPeriod: item.targetPeriod || 'day' };
+                    });
+                    delete item.assignees;
+                }
+                if (!item.assignments) item.assignments = {};
+                // Migration: Importance
+                if (item.isImportant === undefined) item.isImportant = false;
+            };
+
+            state.workflows.forEach(w => w.steps.forEach(migrateItem));
+            if(state.commitments) state.commitments.forEach(migrateItem);
+
             if (!state.workflows || !Array.isArray(state.workflows) || state.workflows.length === 0) {
                 state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
             }
@@ -1072,8 +1127,6 @@
             if(!state.commitments) state.commitments = [];
             if(!state.trackingLog) state.trackingLog = {};
             if(!state.userPrefs) state.userPrefs = { displayName: "", hiddenWorkflows: [], dashboardOrder: [] };
-            if(!state.userPrefs.hiddenWorkflows) state.userPrefs.hiddenWorkflows = [];
-            if(!state.userPrefs.dashboardOrder) state.userPrefs.dashboardOrder = [];
         }
 
         function getActiveWorkflow() {
@@ -1092,9 +1145,7 @@
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed)) {
-                         state.workflows = [{ id: 'default', name: 'Default Routine', active: true, steps: parsed }];
-                    } else if(parsed.workflows) {
+                    if(parsed.workflows) {
                         state.workflows = parsed.workflows;
                         state.commitments = parsed.commitments || [];
                         state.trackingLog = parsed.trackingLog || {};
@@ -1105,11 +1156,6 @@
             } else {
                 state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
             }
-            
-            // Local mode: Load prefs from local storage too if we wanted to support it, 
-            // but for now local mode resets prefs on load or uses transient memory.
-            // Let's check if we can persist it separately or just keep transient.
-            // For now, transient is fine as per original logic, but we init the array.
             state.userPrefs = { displayName: "Local User", hiddenWorkflows: [], dashboardOrder: [] };
         }
 
@@ -1149,17 +1195,16 @@
             const newHouseholdId = Math.random().toString(36).substring(2, 8).toUpperCase();
             try {
                 const members = {};
-                // Determine best name to use
                 const nameBase = state.userPrefs.displayName || (state.user.email || 'Admin').split('@')[0];
                 members[state.user.uid] = { email: state.user.email || 'Anonymous', name: nameBase };
                 const householdName = `The ${nameBase.split(' ')[0]}'s Household`;
                 const householdRef = doc(db, "artifacts", appId, "public", "data", "households", newHouseholdId);
                 await setDoc(householdRef, {
-                    workflows: state.workflows, commitments: state.commitments, members: members, name: householdName, createdBy: state.user.uid, createdAt: new Date().toISOString()
+                    workflows: state.workflows, commitments: state.commitments, members: members, name: householdName, createdBy: state.user.uid, createdAt: new Date().toISOString(), privacy: 'shared'
                 });
                 const userRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
                 await setDoc(userRef, { householdId: newHouseholdId }, { merge: true });
-                state.householdId = newHouseholdId; state.householdName = householdName; state.householdMembers = members;
+                state.householdId = newHouseholdId; state.householdName = householdName; state.householdMembers = members; state.householdPrivacy = 'shared';
                 showToast("Household Created!"); renderSettingsUI(); renderAuthUI();
             } catch (e) { console.error(e); showToast("Error creating household", true); }
         }
@@ -1194,6 +1239,12 @@
              const input = document.getElementById('household-name-input'); const newName = input.value.trim(); if(!newName || !state.householdId) return;
              try { state.householdName = newName; const householdRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId); await setDoc(householdRef, { name: newName }, { merge: true }); showToast("Household Name Saved"); } catch(e) { console.error(e); showToast("Failed to save name", true); }
         }
+
+        async function updateHouseholdPrivacy(value) {
+            if(!state.householdId) return;
+            state.householdPrivacy = value;
+            await saveData();
+        }
         
         async function updateMemberName(uid, newName) {
             if(!state.householdId) return;
@@ -1207,12 +1258,7 @@
             
             state.userPrefs.displayName = newName;
             await saveUserPrefs();
-            
-            // Also update household member name if applicable
-            if (state.householdId && state.user) {
-                await updateMemberName(state.user.uid, newName);
-            }
-            
+            if (state.householdId && state.user) await updateMemberName(state.user.uid, newName);
             renderAuthUI();
             showToast("Profile Name Saved");
         }
@@ -1220,7 +1266,7 @@
         // --- COMMITMENTS & EDITING LOGIC (Standard) ---
         function addCommitment() {
             const newId = "commitment-" + Math.floor(Math.random() * 10000); if(!state.commitments) state.commitments = [];
-            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignees: [] }); saveData();
+            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignments: {}, isImportant: false }); saveData();
         }
         function updateCommitment(index, field, value) { state.commitments[index][field] = value; saveData(); }
         function deleteCommitment(index) { if(confirm("Delete this commitment?")) { state.commitments.splice(index, 1); saveData(); } }
@@ -1298,13 +1344,13 @@
             let step = w.steps.find(s => s.id === state.currentStepId);
             if (!step) { step = w.steps[0]; state.currentStepId = step.id; }
 
-            // Auto-skip logic: If task is assigned to someone else (and not me), skip it.
-            // Note: We only auto-skip TASKS. Decisions usually affect flow for everyone.
-            if (state.householdId && step.type === 'task' && step.assignees && step.assignees.length > 0 && !step.assignees.includes(state.user.uid)) {
-                // Determine next step ID
+            // Auto-skip logic: Only if tasks are strictly assigned to someone else
+            const assignments = step.assignments || {};
+            const assignedUids = Object.keys(assignments).filter(uid => assignments[uid].active);
+            
+            if (state.householdId && step.type === 'task' && assignedUids.length > 0 && !assignedUids.includes(state.user.uid)) {
                 const nextId = step.next || (w.steps.find(s => s.type === 'end')?.id || COMPLETED_FLOW_ID);
                 state.currentStepId = nextId;
-                // Recursive call to handle consecutive skipped steps
                 renderRunView();
                 return;
             }
@@ -1318,19 +1364,23 @@
             if(step.type === 'decision') icon = 'git-branch';
             if(step.type === 'end') icon = 'check-circle';
             if(step.type === 'task') icon = 'check-square';
+            
+            const importantClass = step.isImportant ? 'text-amber-400' : 'text-white';
+            const importantBadge = step.isImportant ? '<div class="absolute top-4 right-4 text-amber-400"><i data-lucide="star" class="w-6 h-6 fill-amber-400"></i></div>' : '';
 
             let assigneeHtml = '';
-            if (state.householdId && step.assignees && step.assignees.length > 0) {
-                const names = step.assignees.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'Unknown').join(', ');
+            if (state.householdId && assignedUids.length > 0) {
+                const names = assignedUids.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'Unknown').join(', ');
                 assigneeHtml = `<div class="text-xs font-bold text-indigo-300 uppercase mb-2 tracking-wider">Assigned to: ${names}</div>`;
             }
 
             let html = `
+                ${importantBadge}
                 <div class="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-700/50 text-indigo-400 mb-4 animate-bounce-slow">
                     <i data-lucide="${icon}" class="w-8 h-8"></i>
                 </div>
                 ${assigneeHtml}
-                <h2 class="text-3xl font-bold mb-8 leading-tight">${step.text}</h2>
+                <h2 class="text-3xl font-bold mb-8 leading-tight ${importantClass}">${step.text}</h2>
             `;
 
             if (step.type === 'decision') {
@@ -1342,7 +1392,6 @@
                 `;
             } else if (step.type === 'task') {
                 if (state.trackingMode === 'online') {
-                    // Split Buttons for Online Mode
                     html += `
                     <div class="grid grid-cols-2 gap-4 w-full">
                         <button onclick="window.app.nextStep('${step.next}')" class="py-4 px-6 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold transition-transform active:scale-95">
@@ -1353,7 +1402,6 @@
                         </button>
                     </div>`;
                 } else {
-                    // Standard Button
                     html += `
                         <button onclick="window.app.nextStep('${step.next}')" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-lg transition-transform active:scale-95 shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2">
                             Next Step <i data-lucide="arrow-right" class="w-5 h-5"></i>
@@ -1371,22 +1419,19 @@
         }
 
         function markDoneAndNext(stepId, nextId) {
-            // Log completion for current month
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
             
             if (!state.trackingLog[monthKey]) state.trackingLog[monthKey] = {};
             
-            // Default to step ID (for single assignee or household/global)
             let keyToUpdate = stepId;
-
-            // Check if this step is multi-assigned
             const w = getActiveWorkflow();
             if (w) {
                 const step = w.steps.find(s => s.id === stepId);
-                // If we are in a household, the step has > 1 assignees, and the current user is one of them
-                // Then we track specifically for this user using composite key
-                if (step && step.assignees && step.assignees.length > 1 && state.user && step.assignees.includes(state.user.uid)) {
+                const assignments = step.assignments || {};
+                const assignedUids = Object.keys(assignments).filter(uid => assignments[uid].active);
+
+                if (state.householdId && assignedUids.length > 1 && state.user && assignedUids.includes(state.user.uid)) {
                     keyToUpdate = `${stepId}_${state.user.uid}`;
                 }
             }
@@ -1394,7 +1439,7 @@
             const current = state.trackingLog[monthKey][keyToUpdate] || 0;
             state.trackingLog[monthKey][keyToUpdate] = current + 1;
             
-            saveData(); // Auto save
+            saveData(); 
             nextStep(nextId);
         }
 
@@ -1422,7 +1467,6 @@
         }
 
         // --- TRACKER RENDERING ENGINE ---
-        
         function renderTrackingView() {
             const monthIdx = parseInt(document.getElementById('track-month').value);
             const year = parseInt(document.getElementById('track-year').value);
@@ -1455,9 +1499,9 @@
             const trackingKey = `${year}-${printDate.getMonth()}`;
 
             // Helpers
-            const getCircleCount = (step) => {
-                const tc = parseInt(step.targetCount || 1);
-                const period = step.targetPeriod || 'day';
+            const getCircleCount = (baseCount, basePeriod) => {
+                const tc = parseInt(baseCount || 1);
+                const period = basePeriod || 'day';
                 if (period === 'month') return tc;
                 if (period === 'week') return Math.ceil(((daysInMonth - skipDays) / 7) * tc);
                 return Math.max(0, daysInMonth - skipDays);
@@ -1465,13 +1509,11 @@
 
             const renderCircles = (stepId, count) => {
                 let html = '';
-                // Get current filled count from log
                 const filledCount = (state.trackingLog[trackingKey] && state.trackingLog[trackingKey][stepId]) || 0;
 
                 for(let i=1; i<=count; i++) {
                     const isFilled = i <= filledCount;
                     const filledClass = isWebMode && isFilled ? 'filled' : '';
-                    
                     if (isWebMode) {
                         html += `<div class="circle ${filledClass}" onclick="window.app.toggleHabitCircle('${trackingKey}', '${stepId}', ${i})">${i}</div>`;
                     } else {
@@ -1481,27 +1523,45 @@
                 return html;
             };
 
-            const renderAssigneeRow = (stepId, uids, circleCount) => {
-                if(!uids || uids.length === 0) {
-                    return `<div class="cell-checks">${renderCircles(stepId, circleCount)}</div>`;
-                } else if (uids.length === 1) {
-                    const name = state.householdMembers[uids[0]] ? state.householdMembers[uids[0]].name : 'User';
+            const renderAssigneeRow = (stepId, assignments, defaultCount, defaultPeriod) => {
+                const assignedUids = Object.keys(assignments).filter(uid => assignments[uid].active);
+                
+                // PRIVACY FILTER: If Individual mode, only show my row or household row
+                const filteredUids = state.householdPrivacy === 'individual' && state.user 
+                    ? assignedUids.filter(uid => uid === state.user.uid)
+                    : assignedUids;
+
+                if(!assignedUids || assignedUids.length === 0) {
+                    // Household (Global) Lane
+                    return `<div class="cell-checks">${renderCircles(stepId, getCircleCount(defaultCount, defaultPeriod))}</div>`;
+                } else if (filteredUids.length === 0 && assignedUids.length > 0) {
+                     // I am not assigned, and mode is individual -> show nothing (or empty block?)
+                     return `<div class="cell-checks text-xs text-slate-500 italic p-2">Not assigned to you</div>`;
+                } else if (filteredUids.length === 1 && assignedUids.length === 1) {
+                    // Single User Lane
+                    const uid = filteredUids[0];
+                    const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
+                    const config = assignments[uid];
+                    const count = getCircleCount(config.targetCount, config.targetPeriod);
                     return `
                         <div class="cell-checks">
                             <span class="assignee">${name}</span>
-                            ${renderCircles(stepId, circleCount)}
+                            ${renderCircles(stepId, count)}
                         </div>`;
                 } else {
+                    // Multi User Lanes
                     let html = `<div class="cell-checks block">`;
-                    uids.forEach(uid => {
+                    filteredUids.forEach(uid => {
                         const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
                         const compositeId = isWebMode ? `${stepId}_${uid}` : stepId; 
+                        const config = assignments[uid];
+                        const count = getCircleCount(config.targetCount, config.targetPeriod);
                         
                         html += `
                             <div class="lane">
                                 <span class="assignee lane-label">${name}</span>
                                 <div class="flex flex-wrap gap-1">
-                                    ${renderCircles(compositeId, circleCount)}
+                                    ${renderCircles(compositeId, count)}
                                 </div>
                             </div>
                         `;
@@ -1511,30 +1571,52 @@
                 }
             };
 
-            const renderAssigneeBadge = (uids) => {
+            const renderAssigneeBadge = (assignments) => {
+                const uids = Object.keys(assignments).filter(uid => assignments[uid].active);
                 if(!uids || uids.length === 0) return `<div class="assignee household">Household</div>`;
+                
+                // PRIVACY FILTER for Badge Name
+                if (state.householdPrivacy === 'individual' && state.user && !uids.includes(state.user.uid)) {
+                    return `<div class="assignee opacity-50">Others</div>`;
+                }
+
                 if(uids.length > 1) return `<div class="text-[10px] text-slate-500 mt-1">Multi-Assign</div>`;
                 const names = uids.map(uid => state.householdMembers[uid] ? state.householdMembers[uid].name : 'User').join(', ');
                 return `<div class="assignee">${names}</div>`;
             }
 
             const renderRow = (step, isFork = false) => {
-                const circleCount = getCircleCount(step);
+                const assignments = step.assignments || {};
+                const importantClass = step.isImportant ? 'habit-important' : '';
+                
                 let targetText = '';
-                if(step.targetPeriod && step.targetCount && (step.targetPeriod !== 'day' || step.targetCount > 1)) {
-                    targetText = `<div class="text-[10px] opacity-60 mt-1">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
+                // Only show general target text if household assignment
+                if(Object.keys(assignments).filter(k=>assignments[k].active).length === 0) {
+                     if(step.targetPeriod && step.targetCount && (step.targetPeriod !== 'day' || step.targetCount > 1)) {
+                        targetText = `<div class="text-[10px] opacity-60 mt-1">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
+                    }
                 }
 
                 if (isFork) {
                     let innerContent = '';
-                    const uids = step.assignees;
-                    if(!uids || uids.length <= 1) {
+                    // Fork Logic needs to respect Privacy too
+                    const uids = Object.keys(assignments).filter(uid => assignments[uid].active);
+                    const filteredUids = state.householdPrivacy === 'individual' && state.user 
+                        ? uids.filter(uid => uid === state.user.uid)
+                        : uids;
+                        
+                    if(uids.length === 0) {
+                         const circleCount = getCircleCount(step.targetCount, step.targetPeriod);
                          innerContent = `<div class="flex flex-wrap gap-1 mt-2">${renderCircles(step.id, circleCount)}</div>`;
+                    } else if (filteredUids.length === 0) {
+                        innerContent = `<div class="text-[10px] text-slate-500 italic mt-2">Not assigned to you</div>`;
                     } else {
                         innerContent = `<div class="mt-2 space-y-2">`;
-                        uids.forEach(uid => {
+                        filteredUids.forEach(uid => {
                             const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
-                            const compositeId = isWebMode ? `${step.id}_${uid}` : step.id; 
+                            const compositeId = isWebMode ? `${step.id}_${uid}` : step.id;
+                            const config = assignments[uid];
+                            const circleCount = getCircleCount(config.targetCount, config.targetPeriod);
                             innerContent += `
                                 <div class="flex items-center gap-2">
                                     <span class="assignee lane-label">${name}</span>
@@ -1547,9 +1629,12 @@
                         innerContent += `</div>`;
                     }
                     return `
-                    <div class="border-b border-opacity-20 p-3" style="break-inside: avoid; page-break-inside: avoid;">
-                        <div class="font-bold text-sm leading-tight">${step.text}</div>
-                        ${renderAssigneeBadge(step.assignees)}
+                    <div class="border-b border-opacity-20 p-3 ${importantClass}" style="break-inside: avoid; page-break-inside: avoid;">
+                        <div class="font-bold text-sm leading-tight flex items-start gap-1">
+                            ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0 mt-0.5"></i>' : ''} 
+                            ${step.text}
+                        </div>
+                        ${renderAssigneeBadge(assignments)}
                         ${targetText}
                         ${innerContent}
                     </div>
@@ -1557,13 +1642,16 @@
                 }
 
                 return `
-                    <div class="row">
+                    <div class="row ${importantClass}">
                         <div class="cell-habit bg-alt">
-                            <div class="font-bold leading-tight">${step.text}</div>
-                            ${renderAssigneeBadge(step.assignees)}
+                            <div class="font-bold leading-tight flex items-start gap-1">
+                                ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0 mt-0.5"></i>' : ''} 
+                                ${step.text}
+                            </div>
+                            ${renderAssigneeBadge(assignments)}
                             ${targetText}
                         </div>
-                        ${renderAssigneeRow(step.id, step.assignees, circleCount)}
+                        ${renderAssigneeRow(step.id, assignments, step.targetCount, step.targetPeriod)}
                     </div>
                 `;
             };
@@ -1602,7 +1690,7 @@
             const renderFlow = (currentId, stepsMap, stopAt = null, inFork = false) => {
                 let html = '';
                 let curr = currentId;
-                let loops = 0; // Safety brake
+                let loops = 0; 
                 
                 while(curr && curr !== stopAt && loops < 100) {
                     loops++;
@@ -1613,14 +1701,10 @@
                     if(step.type === 'end') break;
 
                     if(step.type === 'decision') {
-                        // Find where paths converge
                         const convergeId = findConvergence(step.nextIfYes, step.nextIfNo, stepsMap);
-                        
-                        // Check if paths are effectively "empty" (immediate jump to convergence)
                         const isYesEmpty = step.nextIfYes === convergeId || !stepsMap.has(step.nextIfYes);
                         const isNoEmpty = step.nextIfNo === convergeId || !stepsMap.has(step.nextIfNo);
 
-                        // Header
                         html += `
                         <div style="break-inside: avoid; page-break-inside: avoid;" class="border-b border-opacity-20 bg-slate-50 mode-print:bg-transparent">
                              <div class="fork-decision-title text-sm py-1">
@@ -1630,20 +1714,17 @@
                         </div>`;
 
                         if (!isYesEmpty && !isNoEmpty) {
-                            // Standard Fork (Both sides have unique habits)
                             html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
                             html += `<div class="fork-column"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}</div>`;
                             html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
                             html += `</div>`;
                         } else if (!isYesEmpty && isNoEmpty) {
-                            // Linear "Yes" Block (No side is empty)
                             html += `
                             <div class="mode-print:pl-4 mode-print:border-l-2 mode-print:border-slate-300 mode-print:ml-1 my-1">
                                 <div class="text-[9px] font-bold text-slate-500 uppercase mb-1 hidden mode-print:block">↳ If Yes</div>
                                 ${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}
                             </div>`;
                         } else if (isYesEmpty && !isNoEmpty) {
-                            // Linear "No" Block (Yes side is empty)
                             html += `
                             <div class="mode-print:pl-4 mode-print:border-l-2 mode-print:border-slate-300 mode-print:ml-1 my-1">
                                 <div class="text-[9px] font-bold text-slate-500 uppercase mb-1 hidden mode-print:block">↳ If No</div>
@@ -1651,7 +1732,6 @@
                             </div>`;
                         }
                         
-                        // Continue main flow from convergence point
                         curr = convergeId;
                         if(curr) visited.delete(curr); 
 
@@ -1677,10 +1757,7 @@
                     </div>
             `;
 
-            // Filter active workflows based on user preference
             let activeWorkflows = state.workflows.filter(wf => isWorkflowActiveForUser(wf.id));
-            
-            // UPDATED: Apply Sort from Dashboard Order
             if (state.userPrefs.dashboardOrder && state.userPrefs.dashboardOrder.length > 0) {
                 const orderMap = new Map(state.userPrefs.dashboardOrder.map((id, index) => [id, index]));
                 activeWorkflows.sort((a, b) => {
@@ -1710,7 +1787,6 @@
                 html += `</div>`;
             }
 
-            // Reflections Section (Both Web and Print)
             const reflections = (state.trackingLog[trackingKey] && state.trackingLog[trackingKey].reflections) || { wins: "", focus: "" };
             
             if (isWebMode) {
@@ -1735,8 +1811,7 @@
                     <div class="mt-4 pt-4 border-t-2 border-slate-200 flex justify-between text-[8px] text-slate-400"><div>Generated by StackHabits</div></div>
                 `;
             }
-            
-            html += `</div>`; // Close page
+            html += `</div>`; 
             return html;
         }
 
@@ -1751,18 +1826,9 @@
         function toggleHabitCircle(key, id, value) {
             if(!state.trackingLog[key]) state.trackingLog[key] = {};
             const current = state.trackingLog[key][id] || 0;
-            
-            // If clicking the exact current value, toggle off (decrement to prev)
-            // If clicking a higher value, fill up to that value
-            // If clicking a lower value, reduce to that value
-            if (current === value) {
-                state.trackingLog[key][id] = value - 1;
-            } else {
-                state.trackingLog[key][id] = value;
-            }
-            
+            state.trackingLog[key][id] = (current === value) ? value - 1 : value;
             saveData();
-            renderTrackingView(); // Re-render to show animation
+            renderTrackingView(); 
         }
 
         function showToast(msg, isError = false) {
@@ -1788,13 +1854,10 @@
             if (sortableInstance) sortableInstance.destroy();
             container.innerHTML = '';
             
-            // 1. Get Active Workflows
             let activeWorkflows = state.workflows.filter(w => isWorkflowActiveForUser(w.id));
 
-            // 2. Sort based on user preference (dashboardOrder)
             if (state.userPrefs.dashboardOrder && state.userPrefs.dashboardOrder.length > 0) {
                 const orderMap = new Map(state.userPrefs.dashboardOrder.map((id, index) => [id, index]));
-                // Sort: if both have order, compare index. if one has order, it comes first. if neither, keep original.
                 activeWorkflows.sort((a, b) => {
                     const idxA = orderMap.has(a.id) ? orderMap.get(a.id) : 9999;
                     const idxB = orderMap.has(b.id) ? orderMap.get(b.id) : 9999;
@@ -1808,24 +1871,18 @@
             }
 
             activeWorkflows.forEach(w => {
-                // Count steps logic update:
-                // Include steps where type is "Task" 
-                // AND (Assignees is empty OR Assignees includes current user)
                 const stepCount = w.steps.filter(s => {
                     if (s.type !== 'task') return false;
-                    // If assignees exist and user is logged in but not in list, exclude
-                    if (state.householdId && state.user && s.assignees && s.assignees.length > 0 && !s.assignees.includes(state.user.uid)) {
-                        return false;
-                    }
+                    const assignments = s.assignments || {};
+                    const assignedUids = Object.keys(assignments).filter(uid => assignments[uid].active);
+                    if (state.householdId && state.user && assignedUids.length > 0 && !assignedUids.includes(state.user.uid)) return false;
                     return true;
                 }).length;
 
                 const card = document.createElement('div');
                 card.setAttribute('data-id', w.id);
-                // Added cursor-grab for drag indication
                 card.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group select-none cursor-grab active:cursor-grabbing";
                 card.onclick = (e) => { 
-                    // Prevent click if dragging happened (Sortable handles this via 'moved' class usually, but basic check is safer)
                     if(card.classList.contains('sortable-drag')) return; 
                     startRun(w.id); 
                 };
@@ -1843,17 +1900,15 @@
             });
             lucide.createIcons();
 
-            // 3. Initialize Drag & Drop
             sortableInstance = new Sortable(container, {
                 animation: 150,
                 ghostClass: 'sortable-ghost',
-                delay: 100, // Small delay to prevent accidental drags when trying to click
-                delayOnTouchOnly: true, // Only delay on touch devices
+                delay: 100, 
+                delayOnTouchOnly: true,
                 onEnd: (evt) => {
-                    // Update order array
                     const newOrder = Array.from(container.children).map(el => el.getAttribute('data-id'));
                     state.userPrefs.dashboardOrder = newOrder;
-                    saveUserPrefs(); // Save to cloud/local
+                    saveUserPrefs(); 
                 }
             });
         }
@@ -1867,7 +1922,6 @@
             if (state.isLoadingAuth) { statusText.innerHTML = '<span class="animate-pulse">...</span>'; userBtn.classList.remove('text-indigo-400'); return; }
 
             if (state.user) {
-                // Priority: User Profile Display Name > Household Member Name > Email
                 let displayName = state.userPrefs.displayName;
                 if (!displayName && state.householdId && state.householdMembers[state.user.uid] && state.householdMembers[state.user.uid].name) {
                     displayName = state.householdMembers[state.user.uid].name;
@@ -1901,8 +1955,10 @@
         function renderSettingsUI() {
             const radios = document.getElementsByName('tracking_mode');
             radios.forEach(r => { r.checked = (r.value === state.trackingMode); });
+            
+            const privacyRadios = document.getElementsByName('household_privacy');
+            privacyRadios.forEach(r => { r.checked = (r.value === (state.householdPrivacy || 'shared')); });
 
-            // Profile Input
             document.getElementById('profile-name-input').value = state.userPrefs.displayName || "";
 
             const noneDiv = document.getElementById('household-none'); const activeDiv = document.getElementById('household-active');
@@ -1954,7 +2010,7 @@
         }
         async function doLogout() { try { await signOut(auth); } catch (error) { console.error("Logout failed", error); } }
 
-        // --- WORKFLOW EDITOR FUNCTIONS (Same as before) ---
+        // --- WORKFLOW EDITOR FUNCTIONS ---
         function switchEditWorkflow(id) { state.activeWorkflowId = id; renderEditor(); }
         function createWorkflow() {
             const name = prompt("Name for new workflow:", "Evening Routine");
@@ -1965,21 +2021,12 @@
         
         async function toggleWorkflowActive() { 
             const w = getActiveWorkflow(); 
-            // w.active on the shared object is no longer the source of truth for visibility
-            
-            // Check current status
             const isCurrentlyActive = isWorkflowActiveForUser(w.id);
-            
             if (isCurrentlyActive) {
-                // Make inactive -> Add to hidden list
-                if (!state.userPrefs.hiddenWorkflows.includes(w.id)) {
-                    state.userPrefs.hiddenWorkflows.push(w.id);
-                }
+                if (!state.userPrefs.hiddenWorkflows.includes(w.id)) state.userPrefs.hiddenWorkflows.push(w.id);
             } else {
-                // Make active -> Remove from hidden list
                 state.userPrefs.hiddenWorkflows = state.userPrefs.hiddenWorkflows.filter(id => id !== w.id);
             }
-            
             await saveUserPrefs();
             renderEditor(); 
         }
@@ -1997,44 +2044,109 @@
         
         function insertStepAfter(index) {
             const w = getActiveWorkflow(); const currentStep = w.steps[index]; const newId = "step-" + Math.floor(Math.random() * 10000);
-            const newStep = { id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" };
+            const newStep = { id: newId, type: "task", text: "New Step", next: "", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false };
             if(currentStep.type === 'decision') { newStep.next = currentStep.nextIfYes || ""; currentStep.nextIfYes = newId; } else { newStep.next = currentStep.next || ""; currentStep.next = newId; }
             w.steps.splice(index + 1, 0, newStep); saveData(); renderEditor(); showToast("Step Inserted");
         }
         function insertStepBefore(index) {
             const w = getActiveWorkflow(); const currentStep = w.steps[index]; const newId = "step-" + Math.floor(Math.random() * 10000);
-            const newStep = { id: newId, type: "task", text: "New Start Step", next: currentStep.id, assignees: [], targetCount: 1, targetPeriod: "day" };
+            const newStep = { id: newId, type: "task", text: "New Start Step", next: currentStep.id, assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false };
             if (currentStep.id === 'start' || index === 0) {
                 if(currentStep.id === 'start') { const oldId = "step-" + Math.floor(Math.random() * 10000); currentStep.id = oldId; newStep.id = 'start'; newStep.next = oldId; }
                 w.steps.splice(index, 0, newStep); saveData(); renderEditor(); showToast("Step Inserted Before");
             } else { alert("Insert Before is currently only supported for the start of the list."); }
         }
-        function resetTarget(index, isCommitment = false) {
-            if(isCommitment) { state.commitments[index].targetCount = 1; state.commitments[index].targetPeriod = 'day'; } else { const w = getActiveWorkflow(); w.steps[index].targetCount = 1; w.steps[index].targetPeriod = 'day'; }
+        function moveStep(index, direction) {
+            const w = getActiveWorkflow();
+            if (direction === -1 && index > 0) {
+                [w.steps[index], w.steps[index - 1]] = [w.steps[index - 1], w.steps[index]];
+            } else if (direction === 1 && index < w.steps.length - 1) {
+                [w.steps[index], w.steps[index + 1]] = [w.steps[index + 1], w.steps[index]];
+            }
             saveData(); renderEditor();
         }
-        
-        function renderAssigneeSelector(index, currentAssignees, isCommitment) {
+        function toggleImportance(index, isCommitment) {
+            if(isCommitment) state.commitments[index].isImportant = !state.commitments[index].isImportant;
+            else getActiveWorkflow().steps[index].isImportant = !getActiveWorkflow().steps[index].isImportant;
+            saveData(); renderEditor();
+        }
+
+        // New Detailed Assignments Renderer
+        function renderAssigneeSelector(index, assignments, isCommitment) {
             if (!state.householdId) return '';
-            const members = state.householdMembers; const isHousehold = !currentAssignees || currentAssignees.length === 0;
-            let html = `<div class="flex flex-wrap gap-2 mt-2">`;
-            html += `<button onclick="window.app.setAssignee('${index}', 'HOUSEHOLD', ${isCommitment})" class="px-3 py-1 rounded-full text-xs font-bold transition-colors border ${isHousehold ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500'}">Household</button>`;
+            const members = state.householdMembers;
+            
+            // Build the selector part (Add person)
+            let selectorHtml = `<div class="flex flex-wrap gap-2 mt-2 items-center text-xs border-t border-slate-700/50 pt-2">
+                <span class="text-slate-500 font-bold uppercase mr-1">Assign:</span>`;
+            
+            // "Household" Button logic
+            const hasAssignments = Object.keys(assignments || {}).some(k => assignments[k].active);
+            
+            // User buttons
             Object.keys(members).forEach(uid => {
-                const isSelected = currentAssignees && currentAssignees.includes(uid);
-                html += `<button onclick="window.app.toggleAssignee('${index}', '${uid}', ${isCommitment})" class="px-3 py-1 rounded-full text-xs font-bold transition-colors border ${isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500'}">${members[uid].name}</button>`;
+                const isActive = assignments && assignments[uid] && assignments[uid].active;
+                if(!isActive) {
+                     selectorHtml += `<button onclick="window.app.addAssignee('${index}', '${uid}', ${isCommitment})" class="px-2 py-0.5 rounded border bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500">+ ${members[uid].name}</button>`;
+                }
             });
-            html += `</div>`; return html;
+            selectorHtml += `</div>`;
+            
+            // Build the Config rows for active assignees
+            let rowsHtml = '';
+            if (hasAssignments) {
+                rowsHtml += `<div class="space-y-2 mt-2">`;
+                Object.keys(assignments).forEach(uid => {
+                    const config = assignments[uid];
+                    if(!config.active) return;
+                    
+                    rowsHtml += `
+                    <div class="flex items-center gap-2 bg-slate-900/40 p-1.5 rounded border border-slate-700/50">
+                        <span class="text-xs font-bold w-20 truncate" title="${members[uid]?.name}">${members[uid]?.name || 'Unknown'}</span>
+                        <div class="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5">
+                             <input type="number" value="${config.targetCount}" onchange="window.app.updateAssignmentConfig('${index}', '${uid}', 'targetCount', this.value, ${isCommitment})" class="w-6 bg-transparent text-center text-xs focus:outline-none">
+                             <span class="text-slate-500 text-[10px]">/</span>
+                             <select onchange="window.app.updateAssignmentConfig('${index}', '${uid}', 'targetPeriod', this.value, ${isCommitment})" class="bg-transparent text-[10px] uppercase font-bold focus:outline-none text-slate-400">
+                                <option value="day" ${config.targetPeriod === 'day' ? 'selected' : ''}>D</option>
+                                <option value="week" ${config.targetPeriod === 'week' ? 'selected' : ''}>W</option>
+                                <option value="month" ${config.targetPeriod === 'month' ? 'selected' : ''}>M</option>
+                             </select>
+                        </div>
+                        <button onclick="window.app.disableAssignee('${index}', '${uid}', ${isCommitment})" class="ml-auto text-xs text-amber-500 hover:text-amber-300 px-2" title="Disable/Pause Tag">Pause</button>
+                    </div>`;
+                });
+                rowsHtml += `</div>`;
+            }
+            
+            return rowsHtml + selectorHtml;
         }
-        function toggleAssignee(index, uid, isCommitment) {
-            let list = isCommitment ? state.commitments[index].assignees : getActiveWorkflow().steps[index].assignees; if(!list) list = [];
-            if(list.includes(uid)) list = list.filter(u => u !== uid); else list.push(uid);
-            if(isCommitment) state.commitments[index].assignees = list; else getActiveWorkflow().steps[index].assignees = list;
+
+        function addAssignee(index, uid, isCommitment) {
+            let item = isCommitment ? state.commitments[index] : getActiveWorkflow().steps[index];
+            if(!item.assignments) item.assignments = {};
+            // If it existed before, revive it, else create new
+            if(item.assignments[uid]) {
+                item.assignments[uid].active = true;
+            } else {
+                item.assignments[uid] = { active: true, targetCount: 1, targetPeriod: 'day' };
+            }
             saveData(); renderEditor();
         }
-        function setAssignee(index, type, isCommitment) {
-            if(type === 'HOUSEHOLD') { if(isCommitment) state.commitments[index].assignees = []; else getActiveWorkflow().steps[index].assignees = []; }
+        function disableAssignee(index, uid, isCommitment) {
+            let item = isCommitment ? state.commitments[index] : getActiveWorkflow().steps[index];
+            if(item.assignments && item.assignments[uid]) {
+                item.assignments[uid].active = false; // Disable instead of delete
+            }
             saveData(); renderEditor();
         }
+        function updateAssignmentConfig(index, uid, field, value, isCommitment) {
+            let item = isCommitment ? state.commitments[index] : getActiveWorkflow().steps[index];
+            if(item.assignments && item.assignments[uid]) {
+                item.assignments[uid][field] = value;
+            }
+            saveData();
+        }
+
         
         function renderEditor() {
             const container = document.getElementById('editor-list');
@@ -2044,17 +2156,28 @@
             const activeW = getActiveWorkflow();
             const btnActive = document.getElementById('btn-toggle-active');
             
+            if (stepSortableInstance) stepSortableInstance.destroy();
+            
             if(state.trackingMode !== 'disabled') {
                 commitmentsSection.classList.remove('hidden');
                 commitmentsContainer.innerHTML = '';
                 if(state.commitments.length === 0) commitmentsContainer.innerHTML = '<div class="text-slate-500 text-sm italic">No standalone commitments yet.</div>';
                 else {
                     state.commitments.forEach((comm, idx) => {
-                        const assigneeHtml = renderAssigneeSelector(idx, comm.assignees, true);
+                        const assigneeHtml = renderAssigneeSelector(idx, comm.assignments, true);
+                        const starClass = comm.isImportant ? 'text-amber-400 fill-amber-400' : 'text-slate-600';
                         const el = document.createElement('div'); el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 relative group';
                         el.innerHTML = `
-                            <div class="flex items-center gap-4 mb-2"><input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name"><button onclick="window.app.deleteCommitment(${idx})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button></div>
-                            <div class="flex flex-wrap gap-4 items-center"><div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1"><input type="number" value="${comm.targetCount || 1}" onchange="window.app.updateCommitment(${idx}, 'targetCount', this.value)" class="w-10 bg-transparent text-center text-sm focus:outline-none"><span class="text-slate-500">/</span><select onchange="window.app.updateCommitment(${idx}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400"><option value="day" ${comm.targetPeriod === 'day' ? 'selected' : ''}>Day</option><option value="week" ${comm.targetPeriod === 'week' ? 'selected' : ''}>Week</option><option value="month" ${comm.targetPeriod === 'month' ? 'selected' : ''}>Month</option></select><button onclick="window.app.resetTarget(${idx}, true)" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button></div></div>${assigneeHtml}
+                            <div class="flex items-center gap-4 mb-2">
+                                <button onclick="window.app.toggleImportance(${idx}, true)" class="hover:scale-110 transition-transform"><i data-lucide="star" class="w-5 h-5 ${starClass}"></i></button>
+                                <input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name">
+                                <button onclick="window.app.deleteCommitment(${idx})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button>
+                            </div>
+                            <div class="flex flex-wrap gap-4 items-center">
+                                <div class="text-xs text-slate-500 font-bold uppercase">Default Target:</div>
+                                <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1"><input type="number" value="${comm.targetCount || 1}" onchange="window.app.updateCommitment(${idx}, 'targetCount', this.value)" class="w-10 bg-transparent text-center text-sm focus:outline-none"><span class="text-slate-500">/</span><select onchange="window.app.updateCommitment(${idx}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400"><option value="day" ${comm.targetPeriod === 'day' ? 'selected' : ''}>Day</option><option value="week" ${comm.targetPeriod === 'week' ? 'selected' : ''}>Week</option><option value="month" ${comm.targetPeriod === 'month' ? 'selected' : ''}>Month</option></select></div>
+                            </div>
+                            ${assigneeHtml}
                         `;
                         commitmentsContainer.appendChild(el);
                     });
@@ -2064,9 +2187,7 @@
             selector.innerHTML = ''; 
             state.workflows.forEach(w => { 
                 const isActive = isWorkflowActiveForUser(w.id);
-                // Updated Logic for Inactive Text:
                 const inactiveLabel = state.householdId ? '(Inactive for You)' : '(Inactive)';
-                
                 const opt = document.createElement('option'); 
                 opt.value = w.id; 
                 opt.text = `${w.name} ${!isActive ? inactiveLabel : ''}`; 
@@ -2089,12 +2210,17 @@
 
             container.innerHTML = '';
             activeW.steps.forEach((step, index) => {
-                const el = document.createElement('div'); el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-4 relative group';
+                const el = document.createElement('div'); 
+                el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-4 relative group step-card';
+                el.setAttribute('data-index', index);
+                
                 const getOptions = (selected) => { let opts = `<option value="">-- End Routine --</option>`; activeW.steps.forEach(s => { opts += `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.text.substring(0, 20)}${s.text.length>20?'...':''} (${s.id})</option>`; }); return opts; };
-                const assigneeHtml = renderAssigneeSelector(index, step.assignees, false);
+                const assigneeHtml = renderAssigneeSelector(index, step.assignments, false);
+                const starClass = step.isImportant ? 'text-amber-400 fill-amber-400' : 'text-slate-600';
+                
                 let targetHtml = '';
                 if(state.trackingMode !== 'disabled') {
-                    targetHtml = `<div class="w-full sm:w-auto min-w-[150px]"><label class="text-xs text-emerald-400 uppercase font-bold mb-1 block">Target Frequency</label><div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 w-full sm:w-auto"><input type="number" value="${step.targetCount || 1}" onchange="window.app.updateStep(${index}, 'targetCount', this.value)" class="w-8 bg-transparent text-center text-sm focus:outline-none"><span class="text-slate-500">/</span><select onchange="window.app.updateStep(${index}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400"><option value="day" ${step.targetPeriod === 'day' ? 'selected' : ''}>Day</option><option value="week" ${step.targetPeriod === 'week' ? 'selected' : ''}>Week</option><option value="month" ${step.targetPeriod === 'month' ? 'selected' : ''}>Month</option></select><button onclick="window.app.resetTarget(${index})" class="text-xs text-slate-500 hover:text-white ml-1" title="Reset"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button></div></div>`;
+                    targetHtml = `<div class="w-full sm:w-auto min-w-[150px]"><label class="text-xs text-emerald-400 uppercase font-bold mb-1 block">Default Frequency</label><div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 w-full sm:w-auto"><input type="number" value="${step.targetCount || 1}" onchange="window.app.updateStep(${index}, 'targetCount', this.value)" class="w-8 bg-transparent text-center text-sm focus:outline-none"><span class="text-slate-500">/</span><select onchange="window.app.updateStep(${index}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400"><option value="day" ${step.targetPeriod === 'day' ? 'selected' : ''}>Day</option><option value="week" ${step.targetPeriod === 'week' ? 'selected' : ''}>Week</option><option value="month" ${step.targetPeriod === 'month' ? 'selected' : ''}>Month</option></select></div></div>`;
                 }
 
                 let logicHtml = '';
@@ -2104,38 +2230,76 @@
                     logicHtml = `<div class="grid grid-cols-2 gap-4"><div class="flex flex-col"><label class="text-xs text-emerald-500 uppercase font-bold mb-1">If Yes</label><select onchange="window.app.updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfYes)}</select></div><div class="flex flex-col"><label class="text-xs text-amber-500 uppercase font-bold mb-1">If No</label><select onchange="window.app.updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfNo)}</select></div></div>`;
                 }
 
+                // Drag Handle
+                const dragHandle = `<div class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 cursor-grab active:cursor-grabbing handle p-2 hover:text-slate-400"><i data-lucide="grip-vertical" class="w-5 h-5"></i></div>`;
+                
+                // Move Buttons
+                const moveBtns = `
+                    <div class="flex flex-col gap-1 mr-2 pt-6">
+                        <button onclick="window.app.moveStep(${index}, -1)" class="p-1 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-400 disabled:opacity-30" ${index===0?'disabled':''}><i data-lucide="chevron-up" class="w-3 h-3"></i></button>
+                        <button onclick="window.app.moveStep(${index}, 1)" class="p-1 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-400 disabled:opacity-30" ${index===activeW.steps.length-1?'disabled':''}><i data-lucide="chevron-down" class="w-3 h-3"></i></button>
+                    </div>
+                `;
+
                 el.innerHTML = `
-                    <div class="flex justify-between items-start gap-4"><div class="w-1/4 min-w-[100px]"><label class="text-xs text-slate-500 uppercase font-bold">ID</label><input type="text" value="${step.id}" onchange="window.app.updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none"></div><div class="flex-1"><label class="text-xs text-slate-500 uppercase font-bold">Display Text</label><input type="text" value="${step.text}" onchange="window.app.updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none"></div><div class="w-24"><label class="text-xs text-slate-500 uppercase font-bold">Type</label><select onchange="window.app.updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none"><option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option><option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option><option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option></select></div></div>
-                    ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex flex-wrap gap-4 mt-2 items-end">${targetHtml}</div>${assigneeHtml}</div>` : ''}
-                    <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
-                        ${(index === 0 || step.type === 'task') ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
-                        <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-200 px-2 py-1 rounded border border-red-900 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
+                    <div class="flex gap-2">
+                        ${moveBtns}
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start gap-4 mb-2">
+                                <div class="w-1/4 min-w-[100px]"><label class="text-xs text-slate-500 uppercase font-bold">ID</label><input type="text" value="${step.id}" onchange="window.app.updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none"></div>
+                                <div class="flex-1"><label class="text-xs text-slate-500 uppercase font-bold">Display Text</label><input type="text" value="${step.text}" onchange="window.app.updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none"></div>
+                                <div class="w-24"><label class="text-xs text-slate-500 uppercase font-bold">Type</label><select onchange="window.app.updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none"><option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option><option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option><option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option></select></div>
+                                <button onclick="window.app.toggleImportance(${index}, false)" class="mt-5 p-2 rounded hover:bg-slate-700 transition-colors" title="Mark Important"><i data-lucide="star" class="w-5 h-5 ${starClass}"></i></button>
+                            </div>
+                            ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex flex-wrap gap-4 mt-2 items-end">${targetHtml}</div>${assigneeHtml}</div>` : ''}
+                            <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
+                                ${(index === 0 || step.type === 'task') ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
+                                <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-200 px-2 py-1 rounded border border-red-900 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
+                            </div>
+                        </div>
                     </div>
                 `;
                 container.appendChild(el);
             });
             lucide.createIcons();
+
+            // Enable sorting for editor steps
+            stepSortableInstance = new Sortable(container, {
+                animation: 150,
+                handle: '.handle', // Use drag handle if added, or just drag anywhere? 
+                // Let's rely on move buttons for precision, but if user wants drag:
+                // We didn't render the handle in the HTML above to keep it clean, 
+                // but let's just make the whole card draggable? No, text inputs break.
+                // Reverting to just buttons for now as requested "either via buttons or drag & drop".
+                // Let's add the handle dynamically or use a specific zone.
+                // Actually, I'll add the handle to the HTML above.
+                ghostClass: 'sortable-ghost',
+                onEnd: (evt) => {
+                     const oldIndex = evt.oldIndex;
+                     const newIndex = evt.newIndex;
+                     if (oldIndex !== newIndex) {
+                         const w = getActiveWorkflow();
+                         const item = w.steps.splice(oldIndex, 1)[0];
+                         w.steps.splice(newIndex, 0, item);
+                         saveData();
+                         renderEditor(); // Re-render to fix indexes in onclick handlers
+                     }
+                }
+            });
         }
 
-        // UPDATED: Logic for auto-id and auto-link updates
         function updateStep(index, field, value) { 
             const w = getActiveWorkflow(); 
             const step = w.steps[index];
             
-            // Auto-update ID logic
             if (field === 'text') {
                 const oldSlug = toKebabCase(step.text);
-                // Check if ID is default (step-...) or matches the old text slug
                 const isDefaultId = step.id.startsWith('step-') || step.id === oldSlug;
                 const newSlug = toKebabCase(value);
-                
-                // If it was a default ID and we have a valid new slug that is unique, update it
                 if (isDefaultId && newSlug && newSlug.length > 0 && !w.steps.some(s => s.id === newSlug)) {
                      const oldId = step.id;
                      step.id = newSlug;
-                     
-                     // Update references in entire workflow
                      w.steps.forEach(s => {
                          if(s.next === oldId) s.next = newSlug;
                          if(s.nextIfYes === oldId) s.nextIfYes = newSlug;
@@ -2153,16 +2317,12 @@
             const w = getActiveWorkflow(); 
             const lastStep = w.steps[w.steps.length - 1];
             const newId = "step-" + Math.floor(Math.random() * 10000); 
-            
-            w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignees: [], targetCount: 1, targetPeriod: "day" }); 
-            
-            // UPDATED: Auto-link logic for appending at the end
+            w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false }); 
             if (lastStep && lastStep.type === 'task' && !lastStep.next) {
                 if(confirm(`Link previous step "${lastStep.text}" to this new step?`)) {
                     lastStep.next = newId;
                 }
             }
-            
             saveData(); 
             renderEditor(); 
             setTimeout(() => { 
@@ -2179,10 +2339,10 @@
             switchEditWorkflow, createWorkflow, renameWorkflow, deleteWorkflow, toggleWorkflowActive,
             closeRun, startRun, goHome,
             openSettingsModal, closeSettingsModal, createHousehold, joinHousehold, leaveHousehold,
-            updateTrackingSettings, promptRenameMember, updateHouseholdName, updateProfileName,
+            updateTrackingSettings, promptRenameMember, updateHouseholdName, updateProfileName, updateHouseholdPrivacy,
             addCommitment, updateCommitment, deleteCommitment,
             organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
-            insertStepAfter, insertStepBefore, resetTarget, toggleAssignee, setAssignee,
+            insertStepAfter, insertStepBefore, moveStep, toggleImportance, addAssignee, disableAssignee, updateAssignmentConfig,
             openPrintSetup, generatePDF, renderTrackingView, toggleHabitCircle, markDoneAndNext, updateReflection
         };
 
