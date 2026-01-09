@@ -158,30 +158,38 @@
             padding: 0;
         }
         
+        /* UPDATED: Removed border from container to avoid empty lines on page break */
         .mode-print .tracker-section { 
-            border: 2px solid #0f172a; 
             margin-bottom: 1.5rem; 
             display: block; 
-            /* Allow breaking inside the section container, but we will protect rows */
             break-inside: auto; 
         }
         
+        /* UPDATED: Added border to header */
         .mode-print .section-header { 
             background: #0f172a; 
             color: white; 
             padding: 4px 8px; /* Compact padding */
             font-size: 10pt;
-            /* Keep header with at least the first row */
             break-after: avoid; 
             page-break-after: avoid;
+            border-top: 2px solid #0f172a;
+            border-left: 2px solid #0f172a;
+            border-right: 2px solid #0f172a;
         }
 
+        /* UPDATED: Added side borders to rows */
         .mode-print .row { 
             border-bottom: 1px solid #cbd5e1; 
-            /* Prevent splitting a single habit row across pages */
+            border-left: 2px solid #0f172a;
+            border-right: 2px solid #0f172a;
             break-inside: avoid;
             page-break-inside: avoid;
             padding: 2px 0; /* Compact */
+        }
+        /* Ensure the last row closes the box nicely */
+        .mode-print .row:last-child {
+            border-bottom: 2px solid #0f172a;
         }
 
         .mode-print .cell-habit { 
@@ -205,12 +213,21 @@
         .mode-print .assignee.household { background: #dbeafe; color: #1e40af; }
         
         .mode-print .fork-container { 
-            border-bottom: 1px solid #cbd5e1; 
+            border-bottom: 2px solid #0f172a; /* Close the fork box */
+            border-left: 2px solid #0f172a;
+            border-right: 2px solid #0f172a;
             break-inside: avoid; 
             page-break-inside: avoid;
         }
         .mode-print .fork-column { border-right: 1px solid #cbd5e1; }
         .mode-print .fork-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 8pt; padding: 2px; }
+        
+        /* Updated for Fork Border Logic */
+        .mode-print .fork-decision-row {
+            border-left: 2px solid #0f172a;
+            border-right: 2px solid #0f172a;
+        }
+
         .mode-print .fork-decision-title { background: #f1f5f9; padding: 4px; font-size: 9pt; }
         .mode-print .reflection-box { border: 2px solid #cbd5e1; color: #0f172a; min-height: 100px; padding: 8px; }
 
@@ -596,6 +613,15 @@
                     </label>
                 </div>
             </div>
+
+             <!-- AI EXPORT SECTION -->
+             <div class="mb-8">
+                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">AI Insights</h3>
+                <p class="text-xs text-slate-400 mb-3">Export your habit data to analyze trends with AI tools like Gemini or ChatGPT.</p>
+                <button onclick="window.app.exportForAI()" class="w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-bold shadow-lg transition-all text-sm flex items-center justify-center gap-2">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Export Data & Prompt
+                </button>
+            </div>
             
             <!-- HOUSEHOLD SECTION -->
             <div class="mb-6">
@@ -668,6 +694,25 @@
         </div>
     </div>
 
+    <!-- AI EXPORT MODAL -->
+    <div id="ai-export-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto flex flex-col">
+            <button onclick="document.getElementById('ai-export-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-emerald-400"><i data-lucide="sparkles" class="w-5 h-5"></i> AI Insights Export</h2>
+            
+            <div class="space-y-4 text-sm text-slate-300">
+                <p>Use the prompt below to get insights from an AI like Gemini or ChatGPT. If you have manual tracking sheets, upload photos of them alongside this text.</p>
+                
+                <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 relative group">
+                    <button onclick="window.app.copyToClipboard('ai-prompt-content')" class="absolute top-2 right-2 p-1.5 bg-slate-800 rounded text-slate-400 hover:text-white border border-slate-600 text-xs flex items-center gap-1">
+                        <i data-lucide="copy" class="w-3 h-3"></i> Copy
+                    </button>
+                    <pre id="ai-prompt-content" class="whitespace-pre-wrap font-mono text-xs text-slate-400 h-64 overflow-y-auto selection:bg-indigo-500/30"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- PRINT SETUP MODAL -->
     <div id="print-setup-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
@@ -703,9 +748,10 @@
                 <div>
                     <label class="block text-xs uppercase font-bold text-slate-500 mb-1 flex items-center gap-1">
                         Days Off
-                        <div class="group relative inline-block">
-                            <i data-lucide="info" class="w-3 h-3 text-indigo-400 cursor-help"></i>
-                            <div class="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-48 bg-black text-white text-xs rounded p-2 hidden group-hover:block z-50 pointer-events-none shadow-xl border border-slate-700">
+                        <!-- Click to Toggle Tooltip -->
+                        <div class="relative inline-block">
+                             <i data-lucide="info" class="w-3 h-3 text-indigo-400 cursor-pointer" onclick="this.nextElementSibling.classList.toggle('hidden')"></i>
+                             <div class="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-48 bg-black text-white text-xs rounded p-2 hidden z-50 shadow-xl border border-slate-700">
                                 Use this to account for planned vacation days where targets are reduced.
                             </div>
                         </div>
@@ -762,7 +808,8 @@
                 <p><strong>2. Reordering:</strong> Drag and drop steps in the editor or use the arrow buttons. The list is just for editing; the actual execution flow is determined by the "Next Step" logic links.</p>
                 <p><strong>3. Branching:</strong> Change a step type to "Branch". This creates a Yes/No fork.</p>
                 <p><strong>4. Assignments:</strong> Assign habits to specific household members. You can pause specific people or set individual targets.</p>
-                <p><strong>5. Importance:</strong> Mark key habits with the star icon to highlight them in yellow.</p>
+                <p><strong>5. Global Pause:</strong> Use the Eye icon in the editor to completely hide/skip a habit without deleting it.</p>
+                <p><strong>6. Importance:</strong> Mark key habits with the star icon to highlight them in yellow.</p>
             </div>
         </div>
     </div>
@@ -800,15 +847,15 @@
 
         // --- STATE ---
         const DEFAULT_WORKFLOW_STEPS = [
-            { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
-            { id: "gym-prep", type: "task", text: "Pack gym clothes", next: "protein", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
-            { id: "protein", type: "task", text: "Drink pre-workout", next: "go-gym", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
-            { id: "go-gym", type: "task", text: "Go to Gym", next: "shower", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: true },
-            { id: "coffee", type: "task", text: "Brew Coffee", next: "read", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
-            { id: "read", type: "task", text: "Read 10 pages", next: "shower", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
-            { id: "shower", type: "task", text: "Take a cold shower", next: "work", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
-            { id: "work", type: "task", text: "Check Calendar", next: "end", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false },
-            { id: "end", type: "end", text: "Routine Complete!", next: null, assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false }
+            { id: "start", type: "decision", text: "Is it a gym day?", nextIfYes: "gym-prep", nextIfNo: "coffee", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false },
+            { id: "gym-prep", type: "task", text: "Pack gym clothes", next: "protein", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false },
+            { id: "protein", type: "task", text: "Drink pre-workout", next: "go-gym", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false },
+            { id: "go-gym", type: "task", text: "Go to Gym", next: "shower", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: true, isPaused: false },
+            { id: "coffee", type: "task", text: "Brew Coffee", next: "read", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false },
+            { id: "read", type: "task", text: "Read 10 pages", next: "shower", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false },
+            { id: "shower", type: "task", text: "Take a cold shower", next: "work", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false },
+            { id: "work", type: "task", text: "Check Calendar", next: "end", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false },
+            { id: "end", type: "end", text: "Routine Complete!", next: null, assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false }
         ];
 
         const DEFAULT_WORKFLOWS = [
@@ -839,7 +886,7 @@
         };
 
         let sortableInstance = null;
-        let stepSortableInstance = null; // New sortable for step list
+        let stepSortableInstance = null; 
 
         // --- CORE LOGIC ---
         
@@ -931,7 +978,7 @@
             ['print-month-select', 'track-month'].forEach(id => {
                 const monthSelect = document.getElementById(id);
                 if(monthSelect) {
-                    // Populate if empty (for track-month which isn't hardcoded)
+                    // Populate if empty
                     if(monthSelect.options.length === 0) {
                          const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                          months.forEach((m, i) => {
@@ -961,7 +1008,6 @@
                 printBtn.classList.add('hidden');
             }
 
-            // If we were on tracking page but mode changed, go home
             if (state.trackingMode !== 'online' && !document.getElementById('view-track').classList.contains('hidden')) {
                 goHome();
             }
@@ -1025,7 +1071,6 @@
                 updatedAt: new Date().toISOString()
             };
             
-            // If in household, include specific fields
             if (state.householdId) {
                 dataToSave.privacy = state.householdPrivacy || 'shared';
             }
@@ -1101,7 +1146,6 @@
         }
 
         function validateState() {
-            // Migration Logic: Convert assignees array to assignments object
             const migrateItem = (item) => {
                 if (item.assignees && Array.isArray(item.assignees) && !item.assignments) {
                     item.assignments = {};
@@ -1111,8 +1155,9 @@
                     delete item.assignees;
                 }
                 if (!item.assignments) item.assignments = {};
-                // Migration: Importance
                 if (item.isImportant === undefined) item.isImportant = false;
+                // NEW: Global Pause
+                if (item.isPaused === undefined) item.isPaused = false;
             };
 
             state.workflows.forEach(w => w.steps.forEach(migrateItem));
@@ -1244,7 +1289,6 @@
             if(!state.householdId) return;
             state.householdPrivacy = value;
             await saveData();
-            // Re-render tracker immediately if visible
             if(!document.getElementById('view-track').classList.contains('hidden')) {
                 renderTrackingView();
             }
@@ -1267,10 +1311,49 @@
             showToast("Profile Name Saved");
         }
 
+        // --- EXPORT FOR AI ---
+        function exportForAI() {
+            const data = {
+                exportedAt: new Date().toISOString(),
+                workflows: state.workflows.map(w => ({
+                    name: w.name,
+                    steps: w.steps.map(s => s.text)
+                })),
+                trackingLog: state.trackingLog,
+                reflections: Object.keys(state.trackingLog).reduce((acc, key) => {
+                    if(state.trackingLog[key].reflections) acc[key] = state.trackingLog[key].reflections;
+                    return acc;
+                }, {})
+            };
+            
+            const json = JSON.stringify(data, null, 2);
+            
+            const promptText = `I am tracking my habits using a conditional workflow app.
+Please analyze my data below and provide:
+1. Trends in my consistency.
+2. Correlations between habits (if any).
+3. Suggestions for improvement based on my reflections.
+
+If I have uploaded images of manual tracking sheets, please correlate them with this data.
+
+DATA:
+${json}`;
+
+            document.getElementById('ai-prompt-content').textContent = promptText;
+            document.getElementById('ai-export-modal').classList.remove('hidden');
+        }
+
+        function copyToClipboard(elementId) {
+             const text = document.getElementById(elementId).textContent;
+             navigator.clipboard.writeText(text).then(() => {
+                 showToast("Copied to Clipboard!");
+             });
+        }
+
         // --- COMMITMENTS & EDITING LOGIC (Standard) ---
         function addCommitment() {
             const newId = "commitment-" + Math.floor(Math.random() * 10000); if(!state.commitments) state.commitments = [];
-            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignments: {}, isImportant: false }); saveData();
+            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignments: {}, isImportant: false, isPaused: false }); saveData();
         }
         function updateCommitment(index, field, value) { state.commitments[index][field] = value; saveData(); }
         function deleteCommitment(index) { if(confirm("Delete this commitment?")) { state.commitments.splice(index, 1); saveData(); } }
@@ -1347,6 +1430,20 @@
 
             let step = w.steps.find(s => s.id === state.currentStepId);
             if (!step) { step = w.steps[0]; state.currentStepId = step.id; }
+
+            // PAUSED / SKIPPED CHECK
+            if (step.isPaused) {
+                // Determine next step automatically
+                let nextId;
+                if(step.type === 'decision') nextId = step.nextIfNo; // Default path
+                else nextId = step.next;
+                
+                if(!nextId && step.type !== 'end') nextId = COMPLETED_FLOW_ID;
+                
+                state.currentStepId = nextId || COMPLETED_FLOW_ID;
+                renderRunView();
+                return;
+            }
 
             // Auto-skip logic: Only if tasks are strictly assigned to someone else
             const assignments = step.assignments || {};
@@ -1530,7 +1627,7 @@
             const renderAssigneeRow = (stepId, assignments, defaultCount, defaultPeriod) => {
                 const assignedUids = Object.keys(assignments).filter(uid => assignments[uid].active);
                 
-                // PRIVACY FILTER: If Individual mode, only show my row or household row
+                // PRIVACY FILTER
                 const filteredUids = state.householdPrivacy === 'individual' && state.user 
                     ? assignedUids.filter(uid => uid === state.user.uid)
                     : assignedUids;
@@ -1539,18 +1636,14 @@
                     // Household (Global) Lane
                     return `<div class="cell-checks">${renderCircles(stepId, getCircleCount(defaultCount, defaultPeriod))}</div>`;
                 } else if (filteredUids.length === 0 && assignedUids.length > 0) {
-                     // I am not assigned, and mode is individual -> show nothing (or empty block?)
-                     // Actually logic in renderRow should have hidden this completely, but for safety:
                      return `<div class="cell-checks text-xs text-slate-500 italic p-2"></div>`;
                 } else if (filteredUids.length === 1 && assignedUids.length === 1) {
-                    // Single User Lane
+                    // Single User Lane - NO LABEL to avoid duplicate
                     const uid = filteredUids[0];
-                    const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
                     const config = assignments[uid];
                     const count = getCircleCount(config.targetCount, config.targetPeriod);
                     return `
                         <div class="cell-checks">
-                            <span class="assignee">${name}</span>
                             ${renderCircles(stepId, count)}
                         </div>`;
                 } else {
@@ -1579,10 +1672,8 @@
             const renderAssigneeBadge = (assignments) => {
                 const uids = Object.keys(assignments).filter(uid => assignments[uid].active);
                 
-                // Household
                 if(!uids || uids.length === 0) return `<div class="assignee household">Household</div>`;
                 
-                // PRIVACY FILTER for Badge Name (Fix: Show my name instead of Multi-Assign if relevant)
                 if (state.householdPrivacy === 'individual' && state.user) {
                      if (uids.includes(state.user.uid)) {
                          const myName = state.householdMembers[state.user.uid]?.name || 'Me';
@@ -1598,17 +1689,17 @@
             }
 
             const renderRow = (step, isFork = false) => {
+                if (step.isPaused) return ''; // GLOBAL PAUSE CHECK
+
                 const assignments = step.assignments || {};
                 const importantClass = step.isImportant ? 'habit-important' : '';
 
-                // PRIVACY FILTER: Strictly hide rows not for me in individual mode
                 const uids = Object.keys(assignments).filter(uid => assignments[uid].active);
                 if (state.householdPrivacy === 'individual' && state.user && uids.length > 0 && !uids.includes(state.user.uid)) {
-                    return ''; // Hide completely
+                    return ''; 
                 }
                 
                 let targetText = '';
-                // Only show general target text if household assignment (no active specific assignments)
                 if(uids.length === 0) {
                      if(step.targetPeriod && step.targetCount && (step.targetPeriod !== 'day' || step.targetCount > 1)) {
                         targetText = `<div class="text-[10px] opacity-60 mt-1">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
@@ -1617,18 +1708,15 @@
 
                 if (isFork) {
                     let innerContent = '';
-                    // Fork Logic needs to respect Privacy too
                     const filteredUids = state.householdPrivacy === 'individual' && state.user 
                         ? uids.filter(uid => uid === state.user.uid)
                         : uids;
                         
                     if(uids.length === 0) {
                          const circleCount = getCircleCount(step.targetCount, step.targetPeriod);
-                         innerContent = `<div class="flex flex-wrap gap-1 mt-2">${renderCircles(step.id, circleCount)}</div>`;
-                    } else if (filteredUids.length === 0) {
-                         // Should be caught by top check, but safe fallback
-                         return ''; 
+                         innerContent = `<div class="flex flex-wrap gap-1 mt-0">${renderCircles(step.id, circleCount)}</div>`;
                     } else {
+                        // Fork Multi User
                         innerContent = `<div class="mt-2 space-y-2">`;
                         filteredUids.forEach(uid => {
                             const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
@@ -1646,15 +1734,21 @@
                         });
                         innerContent += `</div>`;
                     }
+                    
+                    // FORK LAYOUT: Side-by-Side
                     return `
-                    <div class="border-b border-opacity-20 p-3 ${importantClass}" style="break-inside: avoid; page-break-inside: avoid;">
-                        <div class="font-bold text-sm leading-tight flex items-start gap-1">
-                            ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0 mt-0.5"></i>' : ''} 
-                            ${step.text}
+                    <div class="border-b border-opacity-20 p-2 ${importantClass} flex items-center justify-between" style="break-inside: avoid; page-break-inside: avoid;">
+                        <div>
+                            <div class="font-bold text-sm leading-tight flex items-start gap-1">
+                                ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0 mt-0.5"></i>' : ''} 
+                                ${step.text}
+                            </div>
+                            ${renderAssigneeBadge(assignments)}
+                            ${targetText}
                         </div>
-                        ${renderAssigneeBadge(assignments)}
-                        ${targetText}
-                        ${innerContent}
+                        <div class="pl-4 text-right">
+                             ${innerContent}
+                        </div>
                     </div>
                     `;
                 }
@@ -1674,7 +1768,6 @@
                 `;
             };
 
-            // Recursive Graph Traversal
             const visited = new Set();
             const findConvergence = (startA, startB, stepsMap) => {
                 let pathA = new Set();
@@ -1723,8 +1816,9 @@
                         const isYesEmpty = step.nextIfYes === convergeId || !stepsMap.has(step.nextIfYes);
                         const isNoEmpty = step.nextIfNo === convergeId || !stepsMap.has(step.nextIfNo);
 
+                        // Decision header
                         html += `
-                        <div style="break-inside: avoid; page-break-inside: avoid;" class="border-b border-opacity-20 bg-slate-50 mode-print:bg-transparent">
+                        <div style="break-inside: avoid; page-break-inside: avoid;" class="border-b border-opacity-20 bg-slate-50 mode-print:bg-transparent ${inFork ? 'fork-decision-row' : ''}">
                              <div class="fork-decision-title text-sm py-1">
                                 <i data-lucide="git-branch" class="w-3 h-3"></i> 
                                 <span class="font-bold">${step.text}</span>
@@ -1737,17 +1831,13 @@
                             html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
                             html += `</div>`;
                         } else if (!isYesEmpty && isNoEmpty) {
-                            html += `
-                            <div class="mode-print:pl-4 mode-print:border-l-2 mode-print:border-slate-300 mode-print:ml-1 my-1">
-                                <div class="text-[9px] font-bold text-slate-500 uppercase mb-1 hidden mode-print:block">↳ If Yes</div>
-                                ${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}
-                            </div>`;
+                             html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
+                             html += `<div class="fork-column border-r-0"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}</div>`;
+                             html += `</div>`;
                         } else if (isYesEmpty && !isNoEmpty) {
-                            html += `
-                            <div class="mode-print:pl-4 mode-print:border-l-2 mode-print:border-slate-300 mode-print:ml-1 my-1">
-                                <div class="text-[9px] font-bold text-slate-500 uppercase mb-1 hidden mode-print:block">↳ If No</div>
-                                ${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}
-                            </div>`;
+                             html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
+                             html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
+                             html += `</div>`;
                         }
                         
                         curr = convergeId;
@@ -1800,9 +1890,13 @@
             });
 
             if (state.commitments.length > 0) {
-                html += `<div class="tracker-section"><div class="section-header bg-indigo-900 flex justify-between"><span>Commitments</span><span class="opacity-70 text-[9px] font-normal normal-case">Standalone</span></div>`;
-                state.commitments.forEach(c => html += renderRow(c));
-                html += `</div>`;
+                // Filter out paused commitments for tracking view
+                const visibleCommitments = state.commitments.filter(c => !c.isPaused);
+                if (visibleCommitments.length > 0) {
+                    html += `<div class="tracker-section"><div class="section-header bg-indigo-900 flex justify-between"><span>Commitments</span><span class="opacity-70 text-[9px] font-normal normal-case">Standalone</span></div>`;
+                    visibleCommitments.forEach(c => html += renderRow(c));
+                    html += `</div>`;
+                }
             }
 
             const reflections = (state.trackingLog[trackingKey] && state.trackingLog[trackingKey].reflections) || { wins: "", focus: "" };
@@ -1890,6 +1984,7 @@
 
             activeWorkflows.forEach(w => {
                 const stepCount = w.steps.filter(s => {
+                    if (s.isPaused) return false;
                     if (s.type !== 'task') return false;
                     const assignments = s.assignments || {};
                     const assignedUids = Object.keys(assignments).filter(uid => assignments[uid].active);
@@ -2062,13 +2157,13 @@
         
         function insertStepAfter(index) {
             const w = getActiveWorkflow(); const currentStep = w.steps[index]; const newId = "step-" + Math.floor(Math.random() * 10000);
-            const newStep = { id: newId, type: "task", text: "New Step", next: "", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false };
+            const newStep = { id: newId, type: "task", text: "New Step", next: "", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false };
             if(currentStep.type === 'decision') { newStep.next = currentStep.nextIfYes || ""; currentStep.nextIfYes = newId; } else { newStep.next = currentStep.next || ""; currentStep.next = newId; }
             w.steps.splice(index + 1, 0, newStep); saveData(); renderEditor(); showToast("Step Inserted");
         }
         function insertStepBefore(index) {
             const w = getActiveWorkflow(); const currentStep = w.steps[index]; const newId = "step-" + Math.floor(Math.random() * 10000);
-            const newStep = { id: newId, type: "task", text: "New Start Step", next: currentStep.id, assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false };
+            const newStep = { id: newId, type: "task", text: "New Start Step", next: currentStep.id, assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false };
             if (currentStep.id === 'start' || index === 0) {
                 if(currentStep.id === 'start') { const oldId = "step-" + Math.floor(Math.random() * 10000); currentStep.id = oldId; newStep.id = 'start'; newStep.next = oldId; }
                 w.steps.splice(index, 0, newStep); saveData(); renderEditor(); showToast("Step Inserted Before");
@@ -2088,6 +2183,11 @@
             else getActiveWorkflow().steps[index].isImportant = !getActiveWorkflow().steps[index].isImportant;
             saveData(); renderEditor();
         }
+        function togglePause(index, isCommitment) {
+            if(isCommitment) state.commitments[index].isPaused = !state.commitments[index].isPaused;
+            else getActiveWorkflow().steps[index].isPaused = !getActiveWorkflow().steps[index].isPaused;
+            saveData(); renderEditor();
+        }
 
         // New Detailed Assignments Renderer
         function renderAssigneeSelector(index, assignments, isCommitment) {
@@ -2099,11 +2199,11 @@
                 <div class="flex items-center gap-1 mr-1">
                     <span class="text-slate-500 font-bold uppercase">Assign:</span>
                     <div class="group relative inline-block">
-                        <i data-lucide="info" class="w-3 h-3 text-slate-500 cursor-help"></i>
-                        <div class="absolute left-0 bottom-full mb-2 w-48 bg-black text-white text-[10px] rounded p-2 hidden group-hover:block z-50 pointer-events-none shadow-xl border border-slate-700 font-normal normal-case">
+                        <i data-lucide="info" class="w-3 h-3 text-slate-500 cursor-pointer" onclick="this.nextElementSibling.classList.toggle('hidden')"></i>
+                        <div class="absolute left-0 bottom-full mb-2 w-48 bg-black text-white text-[10px] rounded p-2 hidden z-50 shadow-xl border border-slate-700 font-normal normal-case">
                             <strong>Household:</strong> Default (no specific assignees).<br>
                             <strong>Specific:</strong> Overrides household.<br>
-                            <em>Note: Pausing a specific assignment removes it. If no specific assignments remain, it reverts to Household.</em>
+                            <em>Note: Pausing a specific assignment removes it. If no specific assignments remain, it reverts to Household. Use the main Eye icon to pause the habit globally.</em>
                         </div>
                     </div>
                 </div>`;
@@ -2140,7 +2240,7 @@
                                 <option value="month" ${config.targetPeriod === 'month' ? 'selected' : ''}>M</option>
                              </select>
                         </div>
-                        <button onclick="window.app.disableAssignee('${index}', '${uid}', ${isCommitment})" class="ml-auto text-xs text-amber-500 hover:text-amber-300 px-2" title="Disable/Pause Tag">Pause</button>
+                        <button onclick="window.app.disableAssignee('${index}', '${uid}', ${isCommitment})" class="ml-auto text-xs text-amber-500 hover:text-amber-300 px-2" title="Remove Assignment">Remove</button>
                     </div>`;
                 });
                 rowsHtml += `</div>`;
@@ -2152,7 +2252,6 @@
         function addAssignee(index, uid, isCommitment) {
             let item = isCommitment ? state.commitments[index] : getActiveWorkflow().steps[index];
             if(!item.assignments) item.assignments = {};
-            // If it existed before, revive it, else create new
             if(item.assignments[uid]) {
                 item.assignments[uid].active = true;
             } else {
@@ -2163,7 +2262,7 @@
         function disableAssignee(index, uid, isCommitment) {
             let item = isCommitment ? state.commitments[index] : getActiveWorkflow().steps[index];
             if(item.assignments && item.assignments[uid]) {
-                item.assignments[uid].active = false; // Disable instead of delete
+                item.assignments[uid].active = false;
             }
             saveData(); renderEditor();
         }
@@ -2194,12 +2293,17 @@
                     state.commitments.forEach((comm, idx) => {
                         const assigneeHtml = renderAssigneeSelector(idx, comm.assignments, true);
                         const starClass = comm.isImportant ? 'text-amber-400 fill-amber-400' : 'text-slate-600';
+                        const pauseClass = comm.isPaused ? 'text-red-400' : 'text-slate-600';
+                        const pauseIcon = comm.isPaused ? 'eye-off' : 'eye';
+                        const opacityClass = comm.isPaused ? 'opacity-50' : '';
+                        
                         const hasActiveAssignments = Object.keys(comm.assignments || {}).some(k => comm.assignments[k].active);
 
-                        const el = document.createElement('div'); el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 relative group';
+                        const el = document.createElement('div'); el.className = `bg-slate-800 p-4 rounded-xl border border-slate-700 relative group ${opacityClass}`;
                         el.innerHTML = `
                             <div class="flex items-center gap-4 mb-2">
-                                <button onclick="window.app.toggleImportance(${idx}, true)" class="hover:scale-110 transition-transform"><i data-lucide="star" class="w-5 h-5 ${starClass}"></i></button>
+                                <button onclick="window.app.toggleImportance(${idx}, true)" class="hover:scale-110 transition-transform" title="Important"><i data-lucide="star" class="w-5 h-5 ${starClass}"></i></button>
+                                <button onclick="window.app.togglePause(${idx}, true)" class="hover:scale-110 transition-transform" title="${comm.isPaused ? 'Unpause' : 'Pause'}"><i data-lucide="${pauseIcon}" class="w-5 h-5 ${pauseClass}"></i></button>
                                 <input type="text" value="${comm.text}" onchange="window.app.updateCommitment(${idx}, 'text', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Habit Name">
                                 <button onclick="window.app.deleteCommitment(${idx})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button>
                             </div>
@@ -2241,8 +2345,12 @@
 
             container.innerHTML = '';
             activeW.steps.forEach((step, index) => {
+                const pauseClass = step.isPaused ? 'text-red-400' : 'text-slate-600';
+                const pauseIcon = step.isPaused ? 'eye-off' : 'eye';
+                const opacityClass = step.isPaused ? 'opacity-50' : '';
+                
                 const el = document.createElement('div'); 
-                el.className = 'bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-4 relative group step-card';
+                el.className = `bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-4 relative group step-card ${opacityClass}`;
                 el.setAttribute('data-index', index);
                 
                 const getOptions = (selected) => { let opts = `<option value="">-- End Routine --</option>`; activeW.steps.forEach(s => { opts += `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.text.substring(0, 20)}${s.text.length>20?'...':''} (${s.id})</option>`; }); return opts; };
@@ -2262,10 +2370,6 @@
                     logicHtml = `<div class="grid grid-cols-2 gap-4"><div class="flex flex-col"><label class="text-xs text-emerald-500 uppercase font-bold mb-1">If Yes</label><select onchange="window.app.updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfYes)}</select></div><div class="flex flex-col"><label class="text-xs text-amber-500 uppercase font-bold mb-1">If No</label><select onchange="window.app.updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfNo)}</select></div></div>`;
                 }
 
-                // Drag Handle
-                const dragHandle = `<div class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 cursor-grab active:cursor-grabbing handle p-2 hover:text-slate-400"><i data-lucide="grip-vertical" class="w-5 h-5"></i></div>`;
-                
-                // Move Buttons
                 const moveBtns = `
                     <div class="flex flex-col gap-1 mr-2 pt-6">
                         <button onclick="window.app.moveStep(${index}, -1)" class="p-1 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-400 disabled:opacity-30" ${index===0?'disabled':''}><i data-lucide="chevron-up" class="w-3 h-3"></i></button>
@@ -2281,7 +2385,10 @@
                                 <div class="w-1/4 min-w-[100px]"><label class="text-xs text-slate-500 uppercase font-bold">ID</label><input type="text" value="${step.id}" onchange="window.app.updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none"></div>
                                 <div class="flex-1"><label class="text-xs text-slate-500 uppercase font-bold">Display Text</label><input type="text" value="${step.text}" onchange="window.app.updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none"></div>
                                 <div class="w-24"><label class="text-xs text-slate-500 uppercase font-bold">Type</label><select onchange="window.app.updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none"><option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option><option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option><option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option></select></div>
-                                <button onclick="window.app.toggleImportance(${index}, false)" class="mt-5 p-2 rounded hover:bg-slate-700 transition-colors" title="Mark Important"><i data-lucide="star" class="w-5 h-5 ${starClass}"></i></button>
+                                <div class="flex flex-col gap-1 mt-5">
+                                    <button onclick="window.app.toggleImportance(${index}, false)" class="p-2 rounded hover:bg-slate-700 transition-colors" title="Mark Important"><i data-lucide="star" class="w-5 h-5 ${starClass}"></i></button>
+                                    <button onclick="window.app.togglePause(${index}, false)" class="p-2 rounded hover:bg-slate-700 transition-colors" title="${step.isPaused ? 'Unpause Step' : 'Pause Step Globally'}"><i data-lucide="${pauseIcon}" class="w-5 h-5 ${pauseClass}"></i></button>
+                                </div>
                             </div>
                             ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">${logicHtml}<div class="flex flex-wrap gap-4 mt-2 items-end">${targetHtml}</div>${assigneeHtml}</div>` : ''}
                             <div class="flex gap-2 justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -2296,16 +2403,9 @@
             });
             lucide.createIcons();
 
-            // Enable sorting for editor steps
             stepSortableInstance = new Sortable(container, {
                 animation: 150,
-                handle: '.handle', // Use drag handle if added, or just drag anywhere? 
-                // Let's rely on move buttons for precision, but if user wants drag:
-                // We didn't render the handle in the HTML above to keep it clean, 
-                // but let's just make the whole card draggable? No, text inputs break.
-                // Reverting to just buttons for now as requested "either via buttons or drag & drop".
-                // Let's add the handle dynamically or use a specific zone.
-                // Actually, I'll add the handle to the HTML above.
+                handle: '.handle', 
                 ghostClass: 'sortable-ghost',
                 onEnd: (evt) => {
                      const oldIndex = evt.oldIndex;
@@ -2315,7 +2415,7 @@
                          const item = w.steps.splice(oldIndex, 1)[0];
                          w.steps.splice(newIndex, 0, item);
                          saveData();
-                         renderEditor(); // Re-render to fix indexes in onclick handlers
+                         renderEditor(); 
                      }
                 }
             });
@@ -2349,7 +2449,7 @@
             const w = getActiveWorkflow(); 
             const lastStep = w.steps[w.steps.length - 1];
             const newId = "step-" + Math.floor(Math.random() * 10000); 
-            w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false }); 
+            w.steps.push({ id: newId, type: "task", text: "New Step", next: "", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false }); 
             if (lastStep && lastStep.type === 'task' && !lastStep.next) {
                 if(confirm(`Link previous step "${lastStep.text}" to this new step?`)) {
                     lastStep.next = newId;
@@ -2374,8 +2474,8 @@
             updateTrackingSettings, promptRenameMember, updateHouseholdName, updateProfileName, updateHouseholdPrivacy,
             addCommitment, updateCommitment, deleteCommitment,
             organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
-            insertStepAfter, insertStepBefore, moveStep, toggleImportance, addAssignee, disableAssignee, updateAssignmentConfig,
-            openPrintSetup, generatePDF, renderTrackingView, toggleHabitCircle, markDoneAndNext, updateReflection
+            insertStepAfter, insertStepBefore, moveStep, toggleImportance, togglePause, addAssignee, disableAssignee, updateAssignmentConfig,
+            openPrintSetup, generatePDF, renderTrackingView, toggleHabitCircle, markDoneAndNext, updateReflection, exportForAI, copyToClipboard
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
