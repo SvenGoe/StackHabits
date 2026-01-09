@@ -80,6 +80,9 @@
             /* Print Specific Helper Classes */
             .print-hidden { display: none !important; }
             .print-visible { display: block !important; }
+            
+            /* Hide targets in print as requested */
+            .target-text { display: none !important; }
         }
         
         .print-only { display: none; }
@@ -177,6 +180,12 @@
             border-left: 2px solid #0f172a;
             border-right: 2px solid #0f172a;
         }
+        
+        /* Fix for Commitment Section Color in Print */
+        .mode-print .section-header.commitment-header {
+            background-color: #312e81 !important;
+            border-color: #312e81 !important;
+        }
 
         /* UPDATED: Added side borders to rows */
         .mode-print .row { 
@@ -223,7 +232,7 @@
         .mode-print .fork-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 8pt; padding: 2px; }
         
         /* Updated for Fork Border Logic */
-        .mode-print .fork-decision-row {
+        .mode-print .decision-row {
             border-left: 2px solid #0f172a;
             border-right: 2px solid #0f172a;
         }
@@ -701,13 +710,25 @@
             <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-emerald-400"><i data-lucide="sparkles" class="w-5 h-5"></i> AI Insights Export</h2>
             
             <div class="space-y-4 text-sm text-slate-300">
-                <p>Use the prompt below to get insights from an AI like Gemini or ChatGPT. If you have manual tracking sheets, upload photos of them alongside this text.</p>
+                <p>To analyze your data with AI:</p>
+                <ol class="list-decimal pl-5 space-y-2 text-slate-400">
+                    <li>Download your raw data file below.</li>
+                    <li>Copy the prompt instructions.</li>
+                    <li>Upload the file and paste the instructions into your AI tool (e.g., ChatGPT, Gemini).</li>
+                </ol>
                 
-                <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 relative group">
-                    <button onclick="window.app.copyToClipboard('ai-prompt-content')" class="absolute top-2 right-2 p-1.5 bg-slate-800 rounded text-slate-400 hover:text-white border border-slate-600 text-xs flex items-center gap-1">
-                        <i data-lucide="copy" class="w-3 h-3"></i> Copy
-                    </button>
-                    <pre id="ai-prompt-content" class="whitespace-pre-wrap font-mono text-xs text-slate-400 h-64 overflow-y-auto selection:bg-indigo-500/30"></pre>
+                <a id="download-json-btn" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition-colors">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download Data (JSON)
+                </a>
+
+                <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 relative group mt-4">
+                    <div class="absolute top-2 right-2 flex gap-2">
+                         <span class="text-xs text-slate-500 uppercase font-bold py-1">Prompt</span>
+                        <button onclick="window.app.copyToClipboard('ai-prompt-content')" class="p-1.5 bg-slate-800 rounded text-slate-400 hover:text-white border border-slate-600 text-xs flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3 h-3"></i> Copy
+                        </button>
+                    </div>
+                    <pre id="ai-prompt-content" class="whitespace-pre-wrap font-mono text-xs text-slate-400 h-48 overflow-y-auto selection:bg-indigo-500/30 pt-8"></pre>
                 </div>
             </div>
         </div>
@@ -1327,17 +1348,19 @@
             };
             
             const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
             
-            const promptText = `I am tracking my habits using a conditional workflow app.
-Please analyze my data below and provide:
+            const downloadBtn = document.getElementById('download-json-btn');
+            downloadBtn.href = url;
+            downloadBtn.download = `stackhabits-data-${new Date().toISOString().slice(0,10)}.json`;
+            
+            const promptText = `I am attaching my tracking data file (JSON) and potentially some images of my manual tracking sheets.
+
+Please analyze this data and provide:
 1. Trends in my consistency.
 2. Correlations between habits (if any).
-3. Suggestions for improvement based on my reflections.
-
-If I have uploaded images of manual tracking sheets, please correlate them with this data.
-
-DATA:
-${json}`;
+3. Suggestions for improvement based on my reflections.`;
 
             document.getElementById('ai-prompt-content').textContent = promptText;
             document.getElementById('ai-export-modal').classList.remove('hidden');
@@ -1593,7 +1616,10 @@ ${json}`;
         }
 
         function generateTrackerHTML(printDate, skipDays, isWebMode) {
-            const monthName = printDate.toLocaleString('default', { month: 'long' });
+            // Force English Locale for Print consistency
+            const locale = isWebMode ? 'default' : 'en-US';
+            const monthName = printDate.toLocaleString(locale, { month: 'long' });
+            
             const year = printDate.getFullYear();
             const daysInMonth = new Date(year, printDate.getMonth() + 1, 0).getDate();
             const householdName = state.householdName || (state.householdId ? 'My Household' : 'Personal');
@@ -1702,7 +1728,7 @@ ${json}`;
                 let targetText = '';
                 if(uids.length === 0) {
                      if(step.targetPeriod && step.targetCount && (step.targetPeriod !== 'day' || step.targetCount > 1)) {
-                        targetText = `<div class="text-[10px] opacity-60 mt-1">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
+                        targetText = `<div class="text-[10px] opacity-60 mt-1 target-text">Target: ${step.targetCount}/${step.targetPeriod}</div>`;
                     }
                 }
 
@@ -1711,10 +1737,14 @@ ${json}`;
                     const filteredUids = state.householdPrivacy === 'individual' && state.user 
                         ? uids.filter(uid => uid === state.user.uid)
                         : uids;
-                        
+                    
+                    // Logic to hide name if only one person assigned
+                    const showLabel = filteredUids.length > 1;
+
                     if(uids.length === 0) {
                          const circleCount = getCircleCount(step.targetCount, step.targetPeriod);
-                         innerContent = `<div class="flex flex-wrap gap-1 mt-0">${renderCircles(step.id, circleCount)}</div>`;
+                         // Use Gap-2 and p-2 to match standard rows in print
+                         innerContent = `<div class="flex flex-wrap gap-[2px] p-[2px] mt-0">${renderCircles(step.id, circleCount)}</div>`;
                     } else {
                         // Fork Multi User
                         innerContent = `<div class="mt-2 space-y-2">`;
@@ -1725,8 +1755,8 @@ ${json}`;
                             const circleCount = getCircleCount(config.targetCount, config.targetPeriod);
                             innerContent += `
                                 <div class="flex items-center gap-2">
-                                    <span class="assignee lane-label">${name}</span>
-                                    <div class="flex flex-wrap gap-1">
+                                    ${showLabel ? `<span class="assignee lane-label">${name}</span>` : ''}
+                                    <div class="flex flex-wrap gap-[2px] p-[2px]">
                                         ${renderCircles(compositeId, circleCount)}
                                     </div>
                                 </div>
@@ -1816,9 +1846,9 @@ ${json}`;
                         const isYesEmpty = step.nextIfYes === convergeId || !stepsMap.has(step.nextIfYes);
                         const isNoEmpty = step.nextIfNo === convergeId || !stepsMap.has(step.nextIfNo);
 
-                        // Decision header
+                        // Decision header with forced borders in print
                         html += `
-                        <div style="break-inside: avoid; page-break-inside: avoid;" class="border-b border-opacity-20 bg-slate-50 mode-print:bg-transparent ${inFork ? 'fork-decision-row' : ''}">
+                        <div style="break-inside: avoid; page-break-inside: avoid;" class="border-b border-opacity-20 bg-slate-50 mode-print:bg-transparent decision-row ${inFork ? 'fork-decision-row' : ''}">
                              <div class="fork-decision-title text-sm py-1">
                                 <i data-lucide="git-branch" class="w-3 h-3"></i> 
                                 <span class="font-bold">${step.text}</span>
@@ -1893,7 +1923,8 @@ ${json}`;
                 // Filter out paused commitments for tracking view
                 const visibleCommitments = state.commitments.filter(c => !c.isPaused);
                 if (visibleCommitments.length > 0) {
-                    html += `<div class="tracker-section"><div class="section-header bg-indigo-900 flex justify-between"><span>Commitments</span><span class="opacity-70 text-[9px] font-normal normal-case">Standalone</span></div>`;
+                    // Added commitment-header class for specific print styling
+                    html += `<div class="tracker-section"><div class="section-header commitment-header bg-indigo-900 flex justify-between"><span>Commitments</span><span class="opacity-70 text-[9px] font-normal normal-case">Standalone</span></div>`;
                     visibleCommitments.forEach(c => html += renderRow(c));
                     html += `</div>`;
                 }
@@ -2155,6 +2186,25 @@ ${json}`;
             w.steps.forEach(s => { if(!visited.has(s.id)) ordered.push(s); }); w.steps = ordered; saveData(); renderEditor(); showToast("Steps re-organized");
         }
         
+        function autoLinkSteps(w) {
+            for(let i=0; i<w.steps.length; i++) {
+                const current = w.steps[i];
+                const nextStep = w.steps[i+1];
+                
+                if(nextStep) {
+                    if(current.type === 'task') {
+                        current.next = nextStep.id;
+                    } else if (current.type === 'decision') {
+                        current.nextIfYes = nextStep.id;
+                    }
+                } else {
+                     // Last step in list (or logic break)
+                     if(current.type === 'task') current.next = "";
+                     else if (current.type === 'decision') current.nextIfYes = "";
+                }
+            }
+        }
+
         function insertStepAfter(index) {
             const w = getActiveWorkflow(); const currentStep = w.steps[index]; const newId = "step-" + Math.floor(Math.random() * 10000);
             const newStep = { id: newId, type: "task", text: "New Step", next: "", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false };
@@ -2176,6 +2226,7 @@ ${json}`;
             } else if (direction === 1 && index < w.steps.length - 1) {
                 [w.steps[index], w.steps[index + 1]] = [w.steps[index + 1], w.steps[index]];
             }
+            autoLinkSteps(w); // Auto-update links based on new order
             saveData(); renderEditor();
         }
         function toggleImportance(index, isCommitment) {
@@ -2414,6 +2465,7 @@ ${json}`;
                          const w = getActiveWorkflow();
                          const item = w.steps.splice(oldIndex, 1)[0];
                          w.steps.splice(newIndex, 0, item);
+                         autoLinkSteps(w); // Auto-update links after drag
                          saveData();
                          renderEditor(); 
                      }
