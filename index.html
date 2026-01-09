@@ -41,7 +41,7 @@
                 color: #0f172a !important; 
                 overflow: visible !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 0 !important; /* Managed by .page padding now */
                 font-size: 10pt !important; /* Smaller base font */
             }
             
@@ -64,15 +64,15 @@
                 width: 100% !important;
                 min-height: 0 !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 10mm !important; /* Add padding here to compensate for 0 margins */
                 border: none !important;
             }
 
             /* Ensure background colors print */
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             
-            /* Margin on page */
-            @page { margin: 5mm; size: auto; } 
+            /* Margin on page - Set to 0 to hide browser headers/footers */
+            @page { margin: 0; size: auto; } 
 
             /* Hide Web specific elements in print explicitly if they leak */
             .mode-web { display: none !important; }
@@ -83,6 +83,26 @@
             
             /* Hide targets in print as requested */
             .target-text { display: none !important; }
+
+            /* --- MULTI-ASSIGN FIX --- */
+            /* Stack name on top of circles for multi-assign lanes to preserve horizontal space */
+            .mode-print .lane {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 1px !important;
+                margin-bottom: 2px;
+            }
+            
+            .mode-print .assignee.lane-label {
+                width: 100% !important;
+                text-align: left !important;
+                background: transparent !important;
+                color: #475569 !important;
+                font-size: 6pt !important;
+                padding: 0 !important;
+                margin-bottom: 0 !important;
+                font-weight: 800 !important;
+            }
         }
         
         .print-only { display: none; }
@@ -161,14 +181,12 @@
             padding: 0;
         }
         
-        /* UPDATED: Removed border from container to avoid empty lines on page break */
         .mode-print .tracker-section { 
             margin-bottom: 1.5rem; 
             display: block; 
             break-inside: auto; 
         }
         
-        /* UPDATED: Added border to header */
         .mode-print .section-header { 
             background: #0f172a; 
             color: white; 
@@ -187,14 +205,14 @@
             border-color: #312e81 !important;
         }
 
-        /* UPDATED: Added side borders to rows */
         .mode-print .row { 
             border-bottom: 1px solid #cbd5e1; 
             border-left: 2px solid #0f172a;
             border-right: 2px solid #0f172a;
             break-inside: avoid;
             page-break-inside: avoid;
-            padding: 2px 0; /* Compact */
+            padding: 0; /* Strict 0 padding on row container */
+            display: flex;
         }
         /* Ensure the last row closes the box nicely */
         .mode-print .row:last-child {
@@ -203,8 +221,13 @@
 
         .mode-print .cell-habit { 
             border-right: 2px solid #0f172a; 
-            padding: 4px 6px; /* Compact */
+            padding: 4px 6px; 
             font-size: 9pt;
+            /* Strict Width Control to prevent misalignment */
+            flex: 0 0 30%;
+            width: 30%;
+            max-width: 30%;
+            box-sizing: border-box; /* Includes border in 30% */
         }
         .mode-print .cell-habit.bg-alt { background-color: #f8fafc; }
         .mode-print .lane { border-bottom: 1px solid #e2e8f0; padding: 2px 4px; }
@@ -222,7 +245,7 @@
         .mode-print .assignee.household { background: #dbeafe; color: #1e40af; }
         
         .mode-print .fork-container { 
-            border-bottom: 2px solid #0f172a; /* Close the fork box */
+            border-bottom: 2px solid #0f172a; 
             border-left: 2px solid #0f172a;
             border-right: 2px solid #0f172a;
             break-inside: avoid; 
@@ -231,7 +254,6 @@
         .mode-print .fork-column { border-right: 1px solid #cbd5e1; }
         .mode-print .fork-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 8pt; padding: 2px; }
         
-        /* Updated for Fork Border Logic */
         .mode-print .decision-row {
             border-left: 2px solid #0f172a;
             border-right: 2px solid #0f172a;
@@ -247,10 +269,13 @@
         
         .mode-print .habit-important .cell-habit {
             background-color: #fffbeb !important; /* amber-50 */
-            border-left: 4px solid #f59e0b;
+            /* Use inset box-shadow to avoid layout shifts or box-sizing issues */
+            box-shadow: inset 4px 0 0 #f59e0b;
+            border-left: 0 !important; /* Remove actual border that causes shifts */
         }
         .mode-print .habit-important .cell-habit .font-bold {
             color: #b45309;
+            padding-left: 4px; /* Add padding to compensate visually */
         }
         
         .mode-web .habit-important .cell-habit {
@@ -280,7 +305,7 @@
         }
         .mode-web .section-header { background: #334155; color: #f1f5f9; padding: 8px 12px; font-size: 1.1rem; }
         .mode-web .row { border-bottom: 1px solid #334155; padding: 0; }
-        .mode-web .cell-habit { border-right: 1px solid #334155; padding: 10px; width: 35%; }
+        .mode-web .cell-habit { border-right: 1px solid #334155; padding: 10px; width: 35%; flex: 0 0 35%; }
         .mode-web .cell-habit.bg-alt { background-color: #1e293b; }
         .mode-web .lane { border-bottom: 1px solid #334155; padding: 8px; }
         .mode-web .circle { 
@@ -323,8 +348,6 @@
             flex-direction: column;
             justify-content: center;
         }
-        /* In Print mode, let width adjust or set fixed smaller width */
-        .mode-print .cell-habit { width: 30%; }
 
         .cell-checks {
             flex: 1;
@@ -1754,7 +1777,7 @@ Please analyze this data and provide:
                             const config = assignments[uid];
                             const circleCount = getCircleCount(config.targetCount, config.targetPeriod);
                             innerContent += `
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 lane">
                                     ${showLabel ? `<span class="assignee lane-label">${name}</span>` : ''}
                                     <div class="flex flex-wrap gap-[2px] p-[2px]">
                                         ${renderCircles(compositeId, circleCount)}
