@@ -261,6 +261,14 @@
             color: #fbbf24;
         }
 
+        /* Branch Coloring */
+        /* YES Branch (Green) */
+        .branch-yes .cell-habit { border-left: 3px solid #10b981 !important; } /* emerald-500 */
+        .mode-print .branch-yes .cell-habit { border-left-color: #10b981 !important; }
+        
+        /* NO Branch (Red) */
+        .branch-no .cell-habit { border-left: 3px solid #ef4444 !important; } /* red-500 */
+        .mode-print .branch-no .cell-habit { border-left-color: #ef4444 !important; }
 
         /* Web Mode Specifics (Dark) */
         .mode-web { padding-bottom: 5rem; }
@@ -427,7 +435,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-900 text-slate-100 h-[100dvh] w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
 
     <!-- Top Navigation Bar -->
     <nav class="h-14 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 shrink-0 z-50">
@@ -498,7 +506,7 @@
         </div>
 
         <!-- EDIT VIEW -->
-        <div id="view-edit" class="hidden w-full max-w-4xl fade-in pb-40">
+        <div id="view-edit" class="hidden w-full max-w-4xl fade-in pb-80">
             <!-- Workflow Management Toolbar -->
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6 flex flex-col sm:flex-row gap-4 justify-between items-end sm:items-center shadow-lg">
                 <div class="flex flex-col gap-1 w-full sm:w-auto">
@@ -1755,11 +1763,15 @@
                 return `<div class="assignee">${names}</div>`;
             }
 
-            const renderRow = (step, isFork = false) => {
+            const renderRow = (step, isFork = false, branchType = null) => {
                 if (step.isPaused) return ''; // GLOBAL PAUSE CHECK
 
                 const assignments = step.assignments || {};
                 const importantClass = step.isImportant ? 'habit-important' : '';
+                
+                let branchClass = '';
+                if (branchType === 'yes') branchClass = 'branch-yes';
+                if (branchType === 'no') branchClass = 'branch-no';
 
                 const uids = Object.keys(assignments).filter(uid => assignments[uid].active);
                 if (state.householdPrivacy === 'individual' && state.user && uids.length > 0 && !uids.includes(state.user.uid)) {
@@ -1808,7 +1820,7 @@
                     
                     // FORK LAYOUT: Side-by-Side
                     return `
-                    <div class="border-b border-opacity-20 p-2 ${importantClass} flex items-center justify-between" style="break-inside: avoid; page-break-inside: avoid;">
+                    <div class="border-b border-opacity-20 p-2 ${importantClass} ${branchClass} flex items-center justify-between" style="break-inside: avoid; page-break-inside: avoid;">
                         <div>
                             <div class="font-bold text-sm leading-tight flex items-start gap-1">
                                 ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0 mt-0.5"></i>' : ''} 
@@ -1825,7 +1837,7 @@
                 }
 
                 return `
-                    <div class="row ${importantClass}">
+                    <div class="row ${importantClass} ${branchClass}">
                         <div class="cell-habit bg-alt">
                             <div class="font-bold leading-tight flex items-start gap-1">
                                 ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0 mt-0.5"></i>' : ''} 
@@ -1869,7 +1881,7 @@
                 return null; 
             };
 
-            const renderFlow = (currentId, stepsMap, stopAt = null, inFork = false) => {
+            const renderFlow = (currentId, stepsMap, stopAt = null, inFork = false, branchType = null) => {
                 let html = '';
                 let curr = currentId;
                 let loops = 0; 
@@ -1898,16 +1910,16 @@
 
                         if (!isYesEmpty && !isNoEmpty) {
                             html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
-                            html += `<div class="fork-column"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}</div>`;
-                            html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
+                            html += `<div class="fork-column"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true, 'yes')}</div>`;
+                            html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true, 'no')}</div>`;
                             html += `</div>`;
                         } else if (!isYesEmpty && isNoEmpty) {
                              html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
-                             html += `<div class="fork-column border-r-0"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}</div>`;
+                             html += `<div class="fork-column border-r-0"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true, 'yes')}</div>`;
                              html += `</div>`;
                         } else if (isYesEmpty && !isNoEmpty) {
                              html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
-                             html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
+                             html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true, 'no')}</div>`;
                              html += `</div>`;
                         }
                         
@@ -1915,7 +1927,7 @@
                         if(curr) visited.delete(curr); 
 
                     } else {
-                        html += renderRow(step, inFork);
+                        html += renderRow(step, inFork, branchType);
                         curr = step.next;
                     }
                 }
@@ -2494,7 +2506,6 @@
                                     </span>
                                     <div class="flex gap-2 items-center">
                                          <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${typeBadgeColor}">${step.type}</span>
-                                         <span class="text-[10px] font-mono text-slate-500">${step.id}</span>
                                     </div>
                                 </div>
                                 <div class="text-slate-500">
