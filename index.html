@@ -207,16 +207,7 @@
             font-size: 9pt;
         }
         .mode-print .cell-habit.bg-alt { background-color: #f8fafc; }
-        
-        /* ALIGNMENT FIX: Stack lane label on top of circles */
-        .mode-print .lane { 
-            border-bottom: 1px solid #e2e8f0; 
-            padding: 2px 4px;
-            flex-direction: column; /* Stack vertically */
-            align-items: flex-start; /* Align left */
-            gap: 2px;
-        }
-        .mode-print .lane:last-child { border-bottom: none; }
+        .mode-print .lane { padding: 2px 4px; }
         
         .mode-print .circle { 
             border: 1px solid #cbd5e1; 
@@ -291,7 +282,7 @@
         .mode-web .row { border-bottom: 1px solid #334155; padding: 0; }
         .mode-web .cell-habit { border-right: 1px solid #334155; padding: 10px; width: 35%; }
         .mode-web .cell-habit.bg-alt { background-color: #1e293b; }
-        .mode-web .lane { border-bottom: 1px solid #334155; padding: 8px; }
+        .mode-web .lane { padding: 8px; }
         .mode-web .circle { 
             width: 24px; height: 24px; font-size: 10px;
             border: 1.5px solid #475569; 
@@ -347,7 +338,8 @@
 
         .cell-checks.block { display: block; padding: 0; }
         
-        .lane { display: flex; align-items: center; gap: 4px; }
+        /* Updated Lane for Vertical Alignment */
+        /* .lane { display: flex; align-items: center; gap: 4px; } REMOVED OLD */
         
         .circle {
             border-radius: 50%;
@@ -365,16 +357,14 @@
             border-radius: 3px;
             align-self: flex-start;
         }
-        /* ALIGNMENT FIX: Remove fixed width, auto width allows compact fit */
         .assignee.lane-label { 
-            text-align: center; 
+            text-align: left; 
             flex-shrink: 0; 
             margin-top: 0; 
             overflow: hidden; 
-            text-overflow: ellipsis;
-            white-space: nowrap; 
+            text-overflow: ellipsis; 
+            margin-bottom: 4px;
         }
-        .mode-web .assignee.lane-label { width: 60px; }
 
         .fork-container { display: flex; }
         .fork-column { flex: 1; display: flex; flex-direction: column; }
@@ -435,50 +425,6 @@
             font-size: 0.9rem;
             line-height: 1.5;
         }
-
-        /* LIGHT MODE OVERRIDES - STRICT SPECIFICITY */
-        body.light-theme {
-            background-color: #f8fafc !important; /* Slate 50 */
-            color: #0f172a !important; /* Slate 900 */
-        }
-        body.light-theme .bg-slate-900,
-        body.light-theme .bg-slate-800,
-        body.light-theme nav {
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-            border-color: #e2e8f0 !important; /* Slate 200 */
-        }
-        body.light-theme .text-slate-100,
-        body.light-theme .text-white,
-        body.light-theme .text-slate-300 {
-            color: #334155 !important; /* Slate 700 */
-        }
-        body.light-theme .text-slate-400,
-        body.light-theme .text-slate-500 {
-            color: #64748b !important; /* Slate 500 */
-        }
-        body.light-theme .border-slate-700 {
-            border-color: #cbd5e1 !important; /* Slate 300 */
-        }
-        body.light-theme input, 
-        body.light-theme select, 
-        body.light-theme textarea {
-            background-color: #f1f5f9 !important; /* Slate 100 */
-            color: #0f172a !important;
-            border-color: #cbd5e1 !important;
-        }
-        body.light-theme button:hover {
-            opacity: 0.9;
-        }
-        /* Specific Fixes for Light Mode Components */
-        body.light-theme .bg-slate-700 { background-color: #e2e8f0 !important; color: #1e293b !important; }
-        body.light-theme .hover\:bg-slate-700:hover { background-color: #f1f5f9 !important; color: #1e293b !important; }
-        body.light-theme .hover\:bg-slate-600:hover { background-color: #e2e8f0 !important; color: #1e293b !important; }
-        body.light-theme .step-card { background-color: #fff !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important; }
-        
-        /* Fork Visualization Styles */
-        .fork-indicator-yes { border-left: 4px solid #10b981 !important; }
-        .fork-indicator-no { border-left: 4px solid #ef4444 !important; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -603,12 +549,9 @@
                 </div>
                 <div id="commitments-list" class="space-y-4"></div>
             </div>
-            
-            <!-- Extra padding for mobile scrolling -->
-            <div class="h-32 sm:h-48"></div>
         </div>
 
-        <!-- TRACK VIEW -->
+        <!-- TRACK VIEW (New) -->
         <div id="view-track" class="hidden w-full fade-in pb-20 flex flex-col items-center">
             
             <!-- Controls -->
@@ -645,15 +588,6 @@
             
             <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="settings" class="text-indigo-400"></i> Settings</h2>
             
-            <!-- THEME SECTION -->
-            <div class="mb-8">
-                <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Appearance</h3>
-                <div class="flex gap-4">
-                    <button onclick="window.app.toggleTheme('dark')" class="flex-1 p-3 bg-slate-900 rounded-lg border border-slate-600 hover:border-indigo-500 text-center text-sm font-bold">Dark</button>
-                    <button onclick="window.app.toggleTheme('light')" class="flex-1 p-3 bg-slate-50 text-slate-900 rounded-lg border border-slate-300 hover:border-indigo-500 text-center text-sm font-bold">Light</button>
-                </div>
-            </div>
-
             <!-- PROFILE SECTION -->
             <div class="mb-8">
                 <h3 class="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Your Profile</h3>
@@ -788,29 +722,31 @@
                     <li>Upload the file and paste the instructions into your AI tool (e.g., ChatGPT, Gemini).</li>
                 </ol>
                 
-                <div class="flex gap-2">
-                    <a id="download-json-btn" class="flex-1 inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition-colors">
+                <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mb-2">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="ai-include-focus" class="w-4 h-4 accent-emerald-500 rounded" onchange="window.app.exportForAI()">
+                        <span class="text-white font-medium">I also use a Focus Time Tracker</span>
+                    </label>
+                    <p class="text-xs text-slate-500 mt-1 ml-7">Adjusts the prompt to look for correlations with your focus time data.</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <a id="download-json-btn" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition-colors">
                         <i data-lucide="download" class="w-4 h-4"></i> Download Data (JSON)
                     </a>
-                    <button onclick="window.app.downloadAppCode()" class="flex-1 inline-flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold transition-colors">
-                        <i data-lucide="code" class="w-4 h-4"></i> Download App Code
+                    <button onclick="window.app.downloadSourceCode()" class="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold transition-colors">
+                        <i data-lucide="file-code" class="w-4 h-4"></i> Download App Code (Context)
                     </button>
                 </div>
 
                 <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 relative group mt-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex items-center gap-4">
-                            <span class="text-xs text-slate-500 uppercase font-bold">Prompt</span>
-                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" id="ai-include-focus" onchange="window.app.exportForAI()" class="accent-emerald-500 w-3 h-3">
-                                <span class="text-[10px] text-emerald-400">Include Focus Time analysis</span>
-                            </label>
-                        </div>
+                    <div class="absolute top-2 right-2 flex gap-2">
+                         <span class="text-xs text-slate-500 uppercase font-bold py-1">Prompt</span>
                         <button onclick="window.app.copyToClipboard('ai-prompt-content')" class="p-1.5 bg-slate-800 rounded text-slate-400 hover:text-white border border-slate-600 text-xs flex items-center gap-1">
                             <i data-lucide="copy" class="w-3 h-3"></i> Copy
                         </button>
                     </div>
-                    <pre id="ai-prompt-content" class="whitespace-pre-wrap font-mono text-xs text-slate-400 h-48 overflow-y-auto selection:bg-indigo-500/30 pt-2"></pre>
+                    <pre id="ai-prompt-content" class="whitespace-pre-wrap font-mono text-xs text-slate-400 h-48 overflow-y-auto selection:bg-indigo-500/30 pt-8"></pre>
                 </div>
             </div>
         </div>
@@ -969,6 +905,7 @@
             workflows: [], 
             commitments: [], 
             activeWorkflowId: null, 
+            editingStepIndex: null, // NEW: Track expanded step
             currentStepId: "start",
             historyStack: [],
             user: null,
@@ -983,7 +920,6 @@
                 hiddenWorkflows: [], // Array of workflow IDs that are inactive for this user
                 dashboardOrder: [] 
             },
-            editingStepIndex: null, // For tracking open accordion in editor
             isAuthModeLogin: true,
             isOnline: false,
             isLoadingAuth: true
@@ -1013,6 +949,7 @@
                     state.historyStack = [];
                     state.currentStepId = "start";
                     state.activeWorkflowId = null;
+                    state.editingStepIndex = null;
                     state.householdId = null;
                     state.householdName = null;
                     state.householdPrivacy = 'shared';
@@ -1275,8 +1212,6 @@
             }
             if(!state.commitments) state.commitments = [];
             if(!state.trackingLog) state.trackingLog = {};
-            
-            // Fix lost settings: Don't overwrite if existing, just default
             if(!state.userPrefs) state.userPrefs = { displayName: "", hiddenWorkflows: [], dashboardOrder: [] };
         }
 
@@ -1317,15 +1252,11 @@
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if(data.householdId) state.householdId = data.householdId;
-                    if(data.trackingMode) state.trackingMode = data.trackingMode;
-                    if(data.displayName) state.userPrefs.displayName = data.displayName;
-                    if(data.hiddenWorkflows) state.userPrefs.hiddenWorkflows = data.hiddenWorkflows;
-                    if(data.dashboardOrder) state.userPrefs.dashboardOrder = data.dashboardOrder;
-                    if(data.theme) toggleTheme(data.theme, false);
-                    console.log("Profile Loaded:", data);
-                } else {
-                    console.log("No profile found, using defaults");
+                    state.householdId = data.householdId || null;
+                    state.trackingMode = data.trackingMode || 'disabled';
+                    state.userPrefs.displayName = data.displayName || "";
+                    state.userPrefs.hiddenWorkflows = data.hiddenWorkflows || [];
+                    state.userPrefs.dashboardOrder = data.dashboardOrder || [];
                 }
             } catch (e) {
                 console.error("Error loading profile", e);
@@ -1336,24 +1267,15 @@
             if (state.user) {
                 try {
                     const docRef = doc(db, "artifacts", appId, "users", state.user.uid, "data", "profile");
-                    const theme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
                     await setDoc(docRef, { 
                         displayName: state.userPrefs.displayName,
                         hiddenWorkflows: state.userPrefs.hiddenWorkflows,
-                        dashboardOrder: state.userPrefs.dashboardOrder,
-                        theme: theme
+                        dashboardOrder: state.userPrefs.dashboardOrder
                     }, { merge: true });
                 } catch (e) { console.error("Error saving user prefs", e); }
             }
         }
         
-        function toggleTheme(mode, save = true) {
-            if(mode === 'light') document.body.classList.add('light-theme');
-            else document.body.classList.remove('light-theme');
-            
-            if(save) saveUserPrefs();
-        }
-
         async function createHousehold() {
             if (!state.user) return;
             const newHouseholdId = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -1433,7 +1355,7 @@
         // --- EXPORT FOR AI ---
         function exportForAI() {
             const includeFocus = document.getElementById('ai-include-focus').checked;
-            
+
             const data = {
                 exportedAt: new Date().toISOString(),
                 workflows: state.workflows.map(w => ({
@@ -1455,31 +1377,33 @@
             downloadBtn.href = url;
             downloadBtn.download = `stackhabits-data-${new Date().toISOString().slice(0,10)}.json`;
             
-            let promptText = `I am attaching my tracking data file (JSON) and potentially some images of my manual tracking sheets.
+            let promptText = `I am attaching my tracking data file (JSON) and potentially some images of my manual tracking sheets.`;
+            
+            if (includeFocus) {
+                promptText += `\n\nI also use a Focus Time tracker app. Please look for correlations between habits marked "done" in this JSON and my focus time data (which I will provide in a separate message or file). For example, do I have more focus time on days where I went to the gym?`;
+            }
 
-Please analyze this data and provide:
+            promptText += `\n\nPlease analyze this data and provide:
 1. Trends in my consistency.
 2. Correlations between habits (if any).
 3. Suggestions for improvement based on my reflections.`;
-
-            if (includeFocus) {
-                promptText += `\n\n4. I also use a Focus Time tracker. Please look for correlations between my habit consistency/completion and days where I might have higher focus time (if data is provided or inferred from the attached context).`;
-            }
 
             document.getElementById('ai-prompt-content').textContent = promptText;
             document.getElementById('ai-export-modal').classList.remove('hidden');
         }
 
-        function downloadAppCode() {
-            const html = document.documentElement.outerHTML;
-            const blob = new Blob([html], { type: "text/html" });
+        function downloadSourceCode() {
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: "text/html" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = "stackhabits-code.html";
+            a.download = `stackhabits-source-${new Date().toISOString().slice(0,10)}.html`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Source Code Downloaded");
         }
 
         function copyToClipboard(elementId) {
@@ -1789,7 +1713,7 @@ Please analyze this data and provide:
                             ${renderCircles(stepId, count)}
                         </div>`;
                 } else {
-                    // Multi User Lanes
+                    // Multi User Lanes (Vertical Stack)
                     let html = `<div class="cell-checks block">`;
                     filteredUids.forEach(uid => {
                         const name = state.householdMembers[uid] ? state.householdMembers[uid].name : 'User';
@@ -1797,9 +1721,10 @@ Please analyze this data and provide:
                         const config = assignments[uid];
                         const count = getCircleCount(config.targetCount, config.targetPeriod);
                         
+                        // Modified for Vertical Stacking
                         html += `
-                            <div class="lane">
-                                <span class="assignee lane-label">${name}</span>
+                            <div class="lane flex flex-col items-start gap-1 mb-2">
+                                <span class="assignee lane-label text-[9px] mb-0.5">${name}</span>
                                 <div class="flex flex-wrap gap-1">
                                     ${renderCircles(compositeId, count)}
                                 </div>
@@ -1870,8 +1795,8 @@ Please analyze this data and provide:
                             const config = assignments[uid];
                             const circleCount = getCircleCount(config.targetCount, config.targetPeriod);
                             innerContent += `
-                                <div class="flex items-center gap-2">
-                                    ${showLabel ? `<span class="assignee lane-label">${name}</span>` : ''}
+                                <div class="flex flex-col items-start gap-1">
+                                    ${showLabel ? `<span class="assignee lane-label text-[9px] mb-0.5">${name}</span>` : ''}
                                     <div class="flex flex-wrap gap-[2px] p-[2px]">
                                         ${renderCircles(compositeId, circleCount)}
                                     </div>
@@ -2082,6 +2007,14 @@ Please analyze this data and provide:
             saveData();
         }
 
+        function toggleHabitCircle(key, id, value) {
+            if(!state.trackingLog[key]) state.trackingLog[key] = {};
+            const current = state.trackingLog[key][id] || 0;
+            state.trackingLog[key][id] = (current === value) ? value - 1 : value;
+            saveData();
+            renderTrackingView(); 
+        }
+
         function showToast(msg, isError = false) {
             const el = document.getElementById("toast");
             el.innerText = msg;
@@ -2263,7 +2196,7 @@ Please analyze this data and provide:
         async function doLogout() { try { await signOut(auth); } catch (error) { console.error("Logout failed", error); } }
 
         // --- WORKFLOW EDITOR FUNCTIONS ---
-        function switchEditWorkflow(id) { state.activeWorkflowId = id; renderEditor(); }
+        function switchEditWorkflow(id) { state.activeWorkflowId = id; state.editingStepIndex = null; renderEditor(); }
         function createWorkflow() {
             const name = prompt("Name for new workflow:", "Evening Routine");
             if(name) { const newId = "workflow-" + Date.now(); state.workflows.push({ id: newId, name: name, active: true, steps: JSON.parse(JSON.stringify(DEFAULT_WORKFLOW_STEPS)) }); state.activeWorkflowId = newId; saveData(); }
@@ -2347,9 +2280,9 @@ Please analyze this data and provide:
             else getActiveWorkflow().steps[index].isPaused = !getActiveWorkflow().steps[index].isPaused;
             saveData(); renderEditor();
         }
-        
-        function toggleStepDetails(index) {
-            if(state.editingStepIndex === index) state.editingStepIndex = null;
+
+        function toggleEditStep(index) {
+            if (state.editingStepIndex === index) state.editingStepIndex = null;
             else state.editingStepIndex = index;
             renderEditor();
         }
@@ -2508,132 +2441,119 @@ Please analyze this data and provide:
                 btnActive.title = "Activate Workflow for Me"; 
             }
 
-            // --- Pre-calculate Fork Visuals ---
-            const yesTargets = new Set();
-            const noTargets = new Set();
-            activeW.steps.forEach(s => {
-                if(s.type === 'decision') {
-                    if(s.nextIfYes) yesTargets.add(s.nextIfYes);
-                    if(s.nextIfNo) noTargets.add(s.nextIfNo);
-                }
-            });
-            // ---------------------------------
-
             container.innerHTML = '';
             activeW.steps.forEach((step, index) => {
+                const isExpanded = state.editingStepIndex === index;
                 const pauseClass = step.isPaused ? 'text-red-400' : 'text-slate-600';
                 const pauseIcon = step.isPaused ? 'eye-off' : 'eye';
                 const opacityClass = step.isPaused ? 'opacity-50' : '';
-                const isExpanded = state.editingStepIndex === index;
                 
-                // Visual Indicator Classes
-                let indicatorClass = '';
-                let indicatorBadge = '';
-                if (yesTargets.has(step.id)) {
-                    indicatorClass = 'fork-indicator-yes';
-                    indicatorBadge = `<span class="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded ml-2 uppercase tracking-wide">Yes Path</span>`;
-                } else if (noTargets.has(step.id)) {
-                    indicatorClass = 'fork-indicator-no';
-                    indicatorBadge = `<span class="text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded ml-2 uppercase tracking-wide">No Path</span>`;
+                const getOptions = (selected) => { let opts = `<option value="">-- End Routine --</option>`; activeW.steps.forEach(s => { opts += `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.text.substring(0, 20)}${s.text.length>20?'...':''} (${s.id})</option>`; }); return opts; };
+                const assigneeHtml = renderAssigneeSelector(index, step.assignments, false);
+                const starClass = step.isImportant ? 'text-amber-400 fill-amber-400' : 'text-slate-600';
+                const hasActiveAssignments = Object.keys(step.assignments || {}).some(k => step.assignments[k].active);
+                
+                // Badges
+                let typeBadgeColor = 'bg-slate-700 text-slate-300';
+                if (step.type === 'decision') typeBadgeColor = 'bg-indigo-900 text-indigo-200';
+                if (step.type === 'end') typeBadgeColor = 'bg-emerald-900 text-emerald-200';
+
+                let targetHtml = '';
+                if(state.trackingMode !== 'disabled' && !hasActiveAssignments) {
+                    targetHtml = `<div class="w-full sm:w-auto min-w-[150px]"><label class="text-xs text-emerald-400 uppercase font-bold mb-1 block">Default Frequency</label><div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 w-full sm:w-auto"><input type="number" value="${step.targetCount || 1}" onchange="window.app.updateStep(${index}, 'targetCount', this.value)" class="w-8 bg-transparent text-center text-sm focus:outline-none"><span class="text-slate-500">/</span><select onchange="window.app.updateStep(${index}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400"><option value="day" ${step.targetPeriod === 'day' ? 'selected' : ''}>Day</option><option value="week" ${step.targetPeriod === 'week' ? 'selected' : ''}>Week</option><option value="month" ${step.targetPeriod === 'month' ? 'selected' : ''}>Month</option></select></div></div>`;
                 }
 
-                const el = document.createElement('div'); 
-                el.className = `bg-slate-800 rounded-xl border border-slate-700 flex flex-col relative group step-card ${opacityClass} ${indicatorClass} overflow-hidden`;
-                el.setAttribute('data-index', index);
-                
-                // HEADER (Always Visible) - Removed ID, Added StopPropagation on buttons
-                const headerHtml = `
-                    <div class="flex items-center p-3 cursor-pointer hover:bg-slate-700/50 transition-colors" onclick="window.app.toggleStepDetails(${index})">
-                        <div class="handle cursor-grab mr-3 text-slate-500 hover:text-white"><i data-lucide="grip-vertical" class="w-5 h-5"></i></div>
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-mono text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded">#${index + 1}</span>
-                                <span class="font-bold text-sm text-white">${step.text}</span>
-                                ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500"></i>' : ''}
-                                ${step.isPaused ? '<i data-lucide="eye-off" class="w-3 h-3 text-red-400"></i>' : ''}
-                                ${indicatorBadge}
-                            </div>
-                            <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
-                                <span class="uppercase font-bold text-indigo-400">${step.type}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 mr-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onclick="event.stopPropagation(); window.app.toggleImportance(${index}, false)" class="p-1.5 rounded hover:bg-slate-600 text-slate-400 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${step.isImportant ? 'fill-amber-400 text-amber-400' : ''}"></i></button>
-                             <button onclick="event.stopPropagation(); window.app.togglePause(${index}, false)" class="p-1.5 rounded hover:bg-slate-600 text-slate-400 hover:text-red-400"><i data-lucide="${pauseIcon}" class="w-4 h-4 ${step.isPaused ? 'text-red-400' : ''}"></i></button>
-                        </div>
-                        <div class="text-slate-400 transform transition-transform ${isExpanded ? 'rotate-180' : ''}">
-                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
-                        </div>
+                let logicHtml = '';
+                if(step.type === 'task') {
+                    logicHtml = `<div class="flex flex-col"><label class="text-xs text-slate-500 uppercase font-bold mb-1">Next Step</label><select onchange="window.app.updateStep(${index}, 'next', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.next)}</select></div>`;
+                } else if (step.type === 'decision') {
+                    logicHtml = `<div class="grid grid-cols-2 gap-4"><div class="flex flex-col"><label class="text-xs text-emerald-500 uppercase font-bold mb-1">If Yes</label><select onchange="window.app.updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfYes)}</select></div><div class="flex flex-col"><label class="text-xs text-amber-500 uppercase font-bold mb-1">If No</label><select onchange="window.app.updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfNo)}</select></div></div>`;
+                }
+
+                const moveBtns = `
+                    <div class="flex flex-col gap-1 mr-2 pt-2">
+                        <button onclick="window.app.moveStep(${index}, -1)" class="p-1 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-400 disabled:opacity-30" ${index===0?'disabled':''}><i data-lucide="chevron-up" class="w-3 h-3"></i></button>
+                        <button onclick="window.app.moveStep(${index}, 1)" class="p-1 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-400 disabled:opacity-30" ${index===activeW.steps.length-1?'disabled':''}><i data-lucide="chevron-down" class="w-3 h-3"></i></button>
                     </div>
                 `;
 
-                // DETAILS (Collapsible)
-                if (isExpanded) {
-                    const getOptions = (selected) => { let opts = `<option value="">-- End Routine --</option>`; activeW.steps.forEach(s => { opts += `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.text.substring(0, 20)}${s.text.length>20?'...':''} (${s.id})</option>`; }); return opts; };
-                    const assigneeHtml = renderAssigneeSelector(index, step.assignments, false);
-                    const starClass = step.isImportant ? 'text-amber-400 fill-amber-400' : 'text-slate-600';
-                    const hasActiveAssignments = Object.keys(step.assignments || {}).some(k => step.assignments[k].active);
-                    
-                    let targetHtml = '';
-                    if(state.trackingMode !== 'disabled' && !hasActiveAssignments) {
-                        targetHtml = `<div class="w-full sm:w-auto min-w-[150px]"><label class="text-xs text-emerald-400 uppercase font-bold mb-1 block">Default Frequency</label><div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 w-full sm:w-auto"><input type="number" value="${step.targetCount || 1}" onchange="window.app.updateStep(${index}, 'targetCount', this.value)" class="w-8 bg-transparent text-center text-sm focus:outline-none"><span class="text-slate-500">/</span><select onchange="window.app.updateStep(${index}, 'targetPeriod', this.value)" class="bg-transparent text-xs uppercase font-bold focus:outline-none text-slate-400"><option value="day" ${step.targetPeriod === 'day' ? 'selected' : ''}>Day</option><option value="week" ${step.targetPeriod === 'week' ? 'selected' : ''}>Week</option><option value="month" ${step.targetPeriod === 'month' ? 'selected' : ''}>Month</option></select></div></div>`;
-                    }
+                // Main Card Container
+                const el = document.createElement('div'); 
+                el.className = `bg-slate-800 rounded-xl border border-slate-700 flex flex-col relative group step-card ${opacityClass} overflow-hidden`;
+                el.setAttribute('data-index', index);
 
-                    let logicHtml = '';
-                    if(step.type === 'task') {
-                        logicHtml = `<div class="flex flex-col"><label class="text-xs text-slate-500 uppercase font-bold mb-1">Next Step</label><select onchange="window.app.updateStep(${index}, 'next', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.next)}</select></div>`;
-                    } else if (step.type === 'decision') {
-                        logicHtml = `<div class="grid grid-cols-2 gap-4"><div class="flex flex-col"><label class="text-xs text-emerald-500 uppercase font-bold mb-1">If Yes</label><select onchange="window.app.updateStep(${index}, 'nextIfYes', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfYes)}</select></div><div class="flex flex-col"><label class="text-xs text-amber-500 uppercase font-bold mb-1">If No</label><select onchange="window.app.updateStep(${index}, 'nextIfNo', this.value)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none">${getOptions(step.nextIfNo)}</select></div></div>`;
-                    }
-
-                    const moveBtns = `
-                        <div class="flex items-center gap-2 mt-4 pt-4 border-t border-slate-700/50">
-                            <span class="text-xs font-bold text-slate-500 uppercase">Order:</span>
-                            <button onclick="window.app.moveStep(${index}, -1)" class="p-1.5 rounded bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-30" ${index===0?'disabled':''}><i data-lucide="arrow-up" class="w-3 h-3"></i></button>
-                            <button onclick="window.app.moveStep(${index}, 1)" class="p-1.5 rounded bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-30" ${index===activeW.steps.length-1?'disabled':''}><i data-lucide="arrow-down" class="w-3 h-3"></i></button>
-                        </div>
-                    `;
-
-                    el.innerHTML = headerHtml + `
-                        <div class="p-4 bg-slate-800/50 border-t border-slate-700">
-                            <div class="flex flex-col gap-4">
-                                <div class="flex flex-col sm:flex-row gap-4">
-                                    <div class="w-full sm:w-1/4"><label class="text-xs text-slate-500 uppercase font-bold">ID</label><input type="text" value="${step.id}" onchange="window.app.updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none"></div>
-                                    <div class="flex-1"><label class="text-xs text-slate-500 uppercase font-bold">Display Text</label><input type="text" value="${step.text}" onchange="window.app.updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none"></div>
-                                </div>
-                                
-                                <div class="flex flex-col sm:flex-row gap-4">
-                                    <div class="w-full sm:w-1/3"><label class="text-xs text-slate-500 uppercase font-bold">Type</label><select onchange="window.app.updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none"><option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option><option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option><option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option></select></div>
-                                    <div class="flex items-end gap-2">
-                                        <button onclick="window.app.toggleImportance(${index}, false)" class="flex items-center gap-2 px-3 py-2 rounded bg-slate-900 border border-slate-700 hover:bg-slate-700 transition-colors ${step.isImportant ? 'text-amber-400' : 'text-slate-400'}"><i data-lucide="star" class="w-4 h-4 ${starClass}"></i> ${step.isImportant ? 'Important' : 'Normal'}</button>
-                                        <button onclick="window.app.togglePause(${index}, false)" class="flex items-center gap-2 px-3 py-2 rounded bg-slate-900 border border-slate-700 hover:bg-slate-700 transition-colors ${step.isPaused ? 'text-red-400' : 'text-slate-400'}"><i data-lucide="${pauseIcon}" class="w-4 h-4 ${pauseClass}"></i> ${step.isPaused ? 'Paused' : 'Active'}</button>
+                el.innerHTML = `
+                    <div class="flex p-3 items-start ${isExpanded ? 'bg-slate-700/30' : ''}">
+                        ${moveBtns}
+                        <div class="flex-1 cursor-pointer" onclick="window.app.toggleEditStep(${index})">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex flex-col gap-1">
+                                    <span class="font-bold text-sm text-white flex items-center gap-2">
+                                        ${step.text} 
+                                        ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-400 fill-amber-400"></i>' : ''}
+                                    </span>
+                                    <div class="flex gap-2 items-center">
+                                         <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${typeBadgeColor}">${step.type}</span>
+                                         <span class="text-[10px] font-mono text-slate-500">${step.id}</span>
                                     </div>
                                 </div>
-
-                                ${step.type !== 'end' ? `<div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">${logicHtml}<div class="flex flex-wrap gap-4 mt-2 items-end">${targetHtml}</div>${assigneeHtml}</div>` : ''}
-                                
-                                <div class="flex flex-wrap gap-2 justify-between items-end">
-                                    ${moveBtns}
-                                    <div class="flex gap-2">
-                                        ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
-                                        ${(index === 0 || step.type === 'task') ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
-                                        <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/20 hover:bg-red-900 text-red-300 px-3 py-1.5 rounded border border-red-900/50 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
-                                    </div>
+                                <div class="text-slate-500">
+                                    <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4"></i>
                                 </div>
                             </div>
                         </div>
-                    `;
-                } else {
-                    el.innerHTML = headerHtml;
-                }
-                
+                    </div>
+
+                    <!-- EXPANDED CONTENT -->
+                    <div class="${isExpanded ? 'block' : 'hidden'} border-t border-slate-700 p-4 bg-slate-800/50">
+                        <div class="flex flex-col gap-4">
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <div class="flex-1">
+                                    <label class="text-xs text-slate-500 uppercase font-bold">Display Text</label>
+                                    <input type="text" value="${step.text}" onchange="window.app.updateStep(${index}, 'text', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-bold focus:border-indigo-500 outline-none mt-1">
+                                </div>
+                                <div class="w-full sm:w-32">
+                                    <label class="text-xs text-slate-500 uppercase font-bold">Type</label>
+                                    <select onchange="window.app.updateStep(${index}, 'type', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none mt-1"><option value="task" ${step.type === 'task' ? 'selected' : ''}>Task</option><option value="decision" ${step.type === 'decision' ? 'selected' : ''}>Branch</option><option value="end" ${step.type === 'end' ? 'selected' : ''}>End</option></select>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row gap-4 items-end">
+                                <div class="w-full sm:w-1/3">
+                                     <label class="text-xs text-slate-500 uppercase font-bold">Step ID</label>
+                                     <input type="text" value="${step.id}" onchange="window.app.updateStep(${index}, 'id', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm font-mono text-yellow-500 focus:border-indigo-500 outline-none mt-1">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="window.app.toggleImportance(${index}, false)" class="p-2 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors" title="Mark Important"><i data-lucide="star" class="w-4 h-4 ${starClass}"></i></button>
+                                    <button onclick="window.app.togglePause(${index}, false)" class="p-2 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors" title="${step.isPaused ? 'Unpause Step' : 'Pause Step Globally'}"><i data-lucide="${pauseIcon}" class="w-4 h-4 ${pauseClass}"></i></button>
+                                </div>
+                            </div>
+
+                            ${step.type !== 'end' ? `
+                                <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-2">
+                                    ${logicHtml}
+                                    <div class="flex flex-wrap gap-4 mt-2 items-end">${targetHtml}</div>
+                                    ${assigneeHtml}
+                                </div>
+                            ` : ''}
+
+                            <div class="flex gap-2 justify-end mt-2 pt-2 border-t border-slate-700/50">
+                                ${index === 0 ? `<button onclick="window.app.insertStepBefore(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-white flex items-center gap-1"><i data-lucide="corner-left-up" class="w-3 h-3"></i> Insert Before</button>` : ''}
+                                ${(index === 0 || step.type === 'task') ? `<button onclick="window.app.insertStepAfter(${index})" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-white flex items-center gap-1"><i data-lucide="corner-down-left" class="w-3 h-3"></i> Insert After</button>` : ''}
+                                <button onclick="window.app.deleteStep(${index})" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-200 px-3 py-1.5 rounded border border-red-900 flex items-center gap-1"><i data-lucide="trash" class="w-3 h-3"></i> Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
                 container.appendChild(el);
             });
             lucide.createIcons();
 
             stepSortableInstance = new Sortable(container, {
                 animation: 150,
-                handle: '.handle', 
+                handle: '.step-card', // Allow dragging by holding the card (or refined handle)
+                filter: 'input, select, button, .cursor-pointer', // Prevent drag when interacting
+                preventOnFilter: false,
                 ghostClass: 'sortable-ghost',
                 onEnd: (evt) => {
                      const oldIndex = evt.oldIndex;
@@ -2643,9 +2563,8 @@ Please analyze this data and provide:
                          const item = w.steps.splice(oldIndex, 1)[0];
                          w.steps.splice(newIndex, 0, item);
                          autoLinkSteps(w); // Auto-update links after drag
+                         state.editingStepIndex = null; // Close open panels to prevent confusion
                          saveData();
-                         // Keep the same index "open" relative to the list, or close it to avoid confusion
-                         state.editingStepIndex = null; 
                          renderEditor(); 
                      }
                 }
@@ -2687,6 +2606,7 @@ Please analyze this data and provide:
                 }
             }
             saveData(); 
+            state.editingStepIndex = w.steps.length - 1; // Auto open new step
             renderEditor(); 
             setTimeout(() => { 
                 const list = document.getElementById('editor-list'); 
@@ -2694,7 +2614,7 @@ Please analyze this data and provide:
             }, 100); 
         }
 
-        function deleteStep(index) { if(confirm("Delete this step?")) { const w = getActiveWorkflow(); w.steps.splice(index, 1); saveData(); renderEditor(); } }
+        function deleteStep(index) { if(confirm("Delete this step?")) { const w = getActiveWorkflow(); w.steps.splice(index, 1); saveData(); state.editingStepIndex = null; renderEditor(); } }
 
         window.app = {
             switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, 
@@ -2705,8 +2625,8 @@ Please analyze this data and provide:
             updateTrackingSettings, promptRenameMember, updateHouseholdName, updateProfileName, updateHouseholdPrivacy,
             addCommitment, updateCommitment, deleteCommitment,
             organizeSteps, showHelp: () => document.getElementById('help-modal').classList.remove('hidden'),
-            insertStepAfter, insertStepBefore, moveStep, toggleImportance, togglePause, addAssignee, disableAssignee, updateAssignmentConfig,
-            openPrintSetup, generatePDF, renderTrackingView, toggleHabitCircle, markDoneAndNext, updateReflection, exportForAI, copyToClipboard
+            insertStepAfter, insertStepBefore, moveStep, toggleImportance, togglePause, addAssignee, disableAssignee, updateAssignmentConfig, toggleEditStep,
+            openPrintSetup, generatePDF, renderTrackingView, toggleHabitCircle, markDoneAndNext, updateReflection, exportForAI, copyToClipboard, downloadSourceCode
         };
 
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
