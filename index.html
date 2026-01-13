@@ -261,14 +261,6 @@
             color: #fbbf24;
         }
 
-        /* Branch Coloring */
-        /* YES Branch (Green) */
-        .branch-yes .cell-habit { border-left: 3px solid #10b981 !important; } /* emerald-500 */
-        .mode-print .branch-yes .cell-habit { border-left-color: #10b981 !important; }
-        
-        /* NO Branch (Red) */
-        .branch-no .cell-habit { border-left: 3px solid #ef4444 !important; } /* red-500 */
-        .mode-print .branch-no .cell-habit { border-left-color: #ef4444 !important; }
 
         /* Web Mode Specifics (Dark) */
         .mode-web { padding-bottom: 5rem; }
@@ -435,7 +427,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 h-[100dvh] w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
 
     <!-- Top Navigation Bar -->
     <nav class="h-14 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 shrink-0 z-50">
@@ -852,7 +844,7 @@
             <h2 class="text-xl font-bold mb-4">Workflow Guide</h2>
             <div class="text-sm text-slate-300 space-y-4">
                 <p><strong>1. Creating a Flow:</strong> Habits are linked like a chain. Every habit points to the "Next Step" ID.</p>
-                <p><strong>2. Reordering:</strong> Drag and drop steps in the editor or use the arrow buttons. The list is just for editing; the actual execution flow is determined by the "Next Step" logic links.</p>
+                <p><strong>2. Reordering:</strong> Use the arrow buttons to move steps up or down. The list is just for editing; the actual execution flow is determined by the "Next Step" logic links.</p>
                 <p><strong>3. Branching:</strong> Change a step type to "Branch". This creates a Yes/No fork.</p>
                 <p><strong>4. Assignments:</strong> Assign habits to specific household members. You can pause specific people or set individual targets.</p>
                 <p><strong>5. Global Pause:</strong> Use the Eye icon in the editor to completely hide/skip a habit without deleting it.</p>
@@ -1424,7 +1416,7 @@
         // --- COMMITMENTS & EDITING LOGIC (Standard) ---
         function addCommitment() {
             const newId = "commitment-" + Math.floor(Math.random() * 10000); if(!state.commitments) state.commitments = [];
-            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignments: {}, isImportant: false, isPaused: false }); saveData();
+            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false }); saveData();
         }
         function updateCommitment(index, field, value) { state.commitments[index][field] = value; saveData(); }
         function deleteCommitment(index) { if(confirm("Delete this commitment?")) { state.commitments.splice(index, 1); saveData(); } }
@@ -1763,15 +1755,11 @@
                 return `<div class="assignee">${names}</div>`;
             }
 
-            const renderRow = (step, isFork = false, branchType = null) => {
+            const renderRow = (step, isFork = false) => {
                 if (step.isPaused) return ''; // GLOBAL PAUSE CHECK
 
                 const assignments = step.assignments || {};
                 const importantClass = step.isImportant ? 'habit-important' : '';
-                
-                let branchClass = '';
-                if (branchType === 'yes') branchClass = 'branch-yes';
-                if (branchType === 'no') branchClass = 'branch-no';
 
                 const uids = Object.keys(assignments).filter(uid => assignments[uid].active);
                 if (state.householdPrivacy === 'individual' && state.user && uids.length > 0 && !uids.includes(state.user.uid)) {
@@ -1820,7 +1808,7 @@
                     
                     // FORK LAYOUT: Side-by-Side
                     return `
-                    <div class="border-b border-opacity-20 p-2 ${importantClass} ${branchClass} flex items-center justify-between" style="break-inside: avoid; page-break-inside: avoid;">
+                    <div class="border-b border-opacity-20 p-2 ${importantClass} flex items-center justify-between" style="break-inside: avoid; page-break-inside: avoid;">
                         <div>
                             <div class="font-bold text-sm leading-tight flex items-start gap-1">
                                 ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0 mt-0.5"></i>' : ''} 
@@ -1837,7 +1825,7 @@
                 }
 
                 return `
-                    <div class="row ${importantClass} ${branchClass}">
+                    <div class="row ${importantClass}">
                         <div class="cell-habit bg-alt">
                             <div class="font-bold leading-tight flex items-start gap-1">
                                 ${step.isImportant ? '<i data-lucide="star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0 mt-0.5"></i>' : ''} 
@@ -1881,7 +1869,7 @@
                 return null; 
             };
 
-            const renderFlow = (currentId, stepsMap, stopAt = null, inFork = false, branchType = null) => {
+            const renderFlow = (currentId, stepsMap, stopAt = null, inFork = false) => {
                 let html = '';
                 let curr = currentId;
                 let loops = 0; 
@@ -1910,16 +1898,16 @@
 
                         if (!isYesEmpty && !isNoEmpty) {
                             html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
-                            html += `<div class="fork-column"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true, 'yes')}</div>`;
-                            html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true, 'no')}</div>`;
+                            html += `<div class="fork-column"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}</div>`;
+                            html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
                             html += `</div>`;
                         } else if (!isYesEmpty && isNoEmpty) {
                              html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
-                             html += `<div class="fork-column border-r-0"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true, 'yes')}</div>`;
+                             html += `<div class="fork-column border-r-0"><div class="fork-header text-emerald-600 text-[10px]">Yes</div>${renderFlow(step.nextIfYes, stepsMap, convergeId, true)}</div>`;
                              html += `</div>`;
                         } else if (isYesEmpty && !isNoEmpty) {
                              html += `<div class="fork-container" style="break-inside: avoid; page-break-inside: avoid;">`;
-                             html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true, 'no')}</div>`;
+                             html += `<div class="fork-column border-r-0"><div class="fork-header text-amber-600 text-[10px]">No</div>${renderFlow(step.nextIfNo, stepsMap, convergeId, true)}</div>`;
                              html += `</div>`;
                         }
                         
@@ -1927,7 +1915,7 @@
                         if(curr) visited.delete(curr); 
 
                     } else {
-                        html += renderRow(step, inFork, branchType);
+                        html += renderRow(step, inFork);
                         curr = step.next;
                     }
                 }
@@ -2279,7 +2267,8 @@
             } else if (direction === 1 && index < w.steps.length - 1) {
                 [w.steps[index], w.steps[index + 1]] = [w.steps[index + 1], w.steps[index]];
             }
-            autoLinkSteps(w); // Auto-update links based on new order
+            // Disabled auto-link to preserve manual branching when just reordering for visuals
+            // autoLinkSteps(w); 
             saveData(); renderEditor();
         }
         function toggleImportance(index, isCommitment) {
@@ -2384,7 +2373,33 @@
             saveData();
         }
 
-        
+        function getStepColorClass(stepId, steps) {
+            // Helper to trace back the branch context of a step
+            const parents = steps.filter(s => {
+                if (s.type === 'task') return s.next === stepId;
+                if (s.type === 'decision') return s.nextIfYes === stepId || s.nextIfNo === stepId;
+                return false;
+            });
+
+            if (parents.length === 0) return 'border-slate-700';
+
+            for (const p of parents) {
+                if (p.type === 'decision') {
+                    if (p.nextIfYes === stepId) return 'border-emerald-500/50 bg-emerald-900/10';
+                    if (p.nextIfNo === stepId) return 'border-red-500/50 bg-red-900/10';
+                }
+            }
+            
+            // Recurse up tasks (simplified, check first task parent)
+            const taskParent = parents.find(p => p.type === 'task');
+            if (taskParent) {
+                // Prevent infinite recursion loops by limit (not strictly implemented here as workflows are short)
+                return getStepColorClass(taskParent.id, steps);
+            }
+            
+            return 'border-slate-700';
+        }
+
         function renderEditor() {
             const container = document.getElementById('editor-list');
             const commitmentsContainer = document.getElementById('commitments-list');
@@ -2393,7 +2408,10 @@
             const activeW = getActiveWorkflow();
             const btnActive = document.getElementById('btn-toggle-active');
             
-            if (stepSortableInstance) stepSortableInstance.destroy();
+            if (stepSortableInstance) {
+                try { stepSortableInstance.destroy(); } catch(e) {}
+                stepSortableInstance = null;
+            }
             
             if(state.trackingMode !== 'disabled') {
                 commitmentsSection.classList.remove('hidden');
@@ -2465,6 +2483,9 @@
                 const starClass = step.isImportant ? 'text-amber-400 fill-amber-400' : 'text-slate-600';
                 const hasActiveAssignments = Object.keys(step.assignments || {}).some(k => step.assignments[k].active);
                 
+                // Determine Branch Color
+                const branchColorClass = getStepColorClass(step.id, activeW.steps);
+
                 // Badges
                 let typeBadgeColor = 'bg-slate-700 text-slate-300';
                 if (step.type === 'decision') typeBadgeColor = 'bg-indigo-900 text-indigo-200';
@@ -2491,7 +2512,8 @@
 
                 // Main Card Container
                 const el = document.createElement('div'); 
-                el.className = `bg-slate-800 rounded-xl border border-slate-700 flex flex-col relative group step-card ${opacityClass} overflow-hidden`;
+                // Removed sortable-drag classes and added branchColorClass
+                el.className = `bg-slate-800 rounded-xl border flex flex-col relative group step-card ${opacityClass} overflow-hidden ${branchColorClass}`;
                 el.setAttribute('data-index', index);
 
                 el.innerHTML = `
@@ -2560,26 +2582,7 @@
             });
             lucide.createIcons();
 
-            stepSortableInstance = new Sortable(container, {
-                animation: 150,
-                handle: '.step-card', // Allow dragging by holding the card (or refined handle)
-                filter: 'input, select, button, .cursor-pointer', // Prevent drag when interacting
-                preventOnFilter: false,
-                ghostClass: 'sortable-ghost',
-                onEnd: (evt) => {
-                     const oldIndex = evt.oldIndex;
-                     const newIndex = evt.newIndex;
-                     if (oldIndex !== newIndex) {
-                         const w = getActiveWorkflow();
-                         const item = w.steps.splice(oldIndex, 1)[0];
-                         w.steps.splice(newIndex, 0, item);
-                         autoLinkSteps(w); // Auto-update links after drag
-                         state.editingStepIndex = null; // Close open panels to prevent confusion
-                         saveData();
-                         renderEditor(); 
-                     }
-                }
-            });
+            // REMOVED SORTABLE JS INIT HERE AS REQUESTED
         }
 
         function updateStep(index, field, value) { 
