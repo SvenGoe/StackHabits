@@ -1080,7 +1080,9 @@
                         state.workflows = data.workflows;
                         state.commitments = data.commitments || [];
                         state.trackingLog = data.trackingLog || {};
+                        state.statusLog = data.statusLog || []; // <--- ADDED THIS
                         showToast(state.householdId ? "Synced with Household" : "Synced with Cloud");
+                    }
                     } else if (data.workflow) {
                         state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: data.workflow }];
                         saveData(); 
@@ -1110,6 +1112,7 @@
                 workflows: state.workflows,
                 commitments: state.commitments || [],
                 trackingLog: state.trackingLog || {},
+                statusLog: state.statusLog || [], // <--- ADDED THIS
                 updatedAt: new Date().toISOString()
             };
             
@@ -1187,8 +1190,9 @@
             return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         }
 
-        function validateState() {
+		function validateState() {
             const migrateItem = (item) => {
+                // Migration for old data structures
                 if (item.assignees && Array.isArray(item.assignees) && !item.assignments) {
                     item.assignments = {};
                     item.assignees.forEach(uid => {
@@ -1197,9 +1201,12 @@
                     delete item.assignees;
                 }
                 if (!item.assignments) item.assignments = {};
+                // Ensure booleans exist
                 if (item.isImportant === undefined) item.isImportant = false;
-                // NEW: Global Pause
                 if (item.isPaused === undefined) item.isPaused = false;
+                
+                // --- NEW CODE: Initialize Anchor ---
+                if (item.isAnchor === undefined) item.isAnchor = false;
             };
 
             state.workflows.forEach(w => w.steps.forEach(migrateItem));
@@ -1213,6 +1220,10 @@
             }
             if(!state.commitments) state.commitments = [];
             if(!state.trackingLog) state.trackingLog = {};
+            
+            // --- NEW CODE: Initialize History Log for AI ---
+            if(!state.statusLog) state.statusLog = []; 
+            
             if(!state.userPrefs) state.userPrefs = { displayName: "", hiddenWorkflows: [], dashboardOrder: [] };
         }
 
@@ -1361,8 +1372,14 @@
                 exportedAt: new Date().toISOString(),
                 workflows: state.workflows.map(w => ({
                     name: w.name,
-                    steps: w.steps.map(s => s.text)
+                    active: isWorkflowActiveForUser(w.id),
+                    steps: w.steps.map(s => ({
+                        text: s.text, 
+                        isPaused: s.isPaused,
+                        isAnchor: s.isAnchor // <--- Included in export
+                    }))
                 })),
+                statusHistory: state.statusLog || [], // <--- Included history
                 trackingLog: state.trackingLog,
                 reflections: Object.keys(state.trackingLog).reduce((acc, key) => {
                     if(state.trackingLog[key].reflections) acc[key] = state.trackingLog[key].reflections;
@@ -1378,16 +1395,17 @@
             downloadBtn.href = url;
             downloadBtn.download = `stackhabits-data-${new Date().toISOString().slice(0,10)}.json`;
             
-            let promptText = `I am attaching my tracking data file (JSON) and potentially some images of my manual tracking sheets.`;
+            let promptText = `I am attaching my tracking data file (JSON). It includes a 'statusHistory' showing when I deactivated workflows, paused specific habits, or converted habits into non-tracked 'anchors'.`;
             
             if (includeFocus) {
-                promptText += `\n\nI also use a Focus Time tracker app. Please look for correlations between habits marked "done" in this JSON and my focus time data (which I will provide in a separate message or file). For example, do I have more focus time on days where I went to the gym?`;
+                promptText += `\n\nI also use a Focus Time tracker app. Please look for correlations between habits marked "done" in this JSON and my focus time data.`;
             }
 
             promptText += `\n\nPlease analyze this data and provide:
 1. Trends in my consistency.
-2. Correlations between habits (if any).
-3. Suggestions for improvement based on my reflections.`;
+2. Impact of pausing/deactivating routines on my overall performance.
+3. Correlations between habits (if any).
+4. Suggestions based on my reflections.`;
 
             document.getElementById('ai-prompt-content').textContent = promptText;
             document.getElementById('ai-export-modal').classList.remove('hidden');
@@ -1416,11 +1434,23 @@
 
         // --- COMMITMENTS & EDITING LOGIC (Standard) ---
         function addCommitment() {
-            const newId = "commitment-" + Math.floor(Math.random() * 10000); if(!state.commitments) state.commitments = [];
-            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignments: {}, targetCount: 1, targetPeriod: "day", isImportant: false, isPaused: false }); saveData();
+            const newId = "commitment-" + Math.floor(Math.random() * 10000); 
+            if(!state.commitments) state.commitments = [];
+            // Note: We added isAnchor: false here
+            state.commitments.push({ id: newId, text: "New Commitment", targetCount: 1, targetPeriod: "day", assignments: {}, isImportant: false, isPaused: false, isAnchor: false }); 
+            saveData();
+            // --- FIX: Force UI Refresh ---
+            renderEditor();
         }
         function updateCommitment(index, field, value) { state.commitments[index][field] = value; saveData(); }
-        function deleteCommitment(index) { if(confirm("Delete this commitment?")) { state.commitments.splice(index, 1); saveData(); } }
+        function deleteCommitment(index) { 
+            if(confirm("Delete this commitment?")) { 
+                state.commitments.splice(index, 1); 
+                saveData(); 
+                // --- FIX: Force UI Refresh ---
+                renderEditor(); 
+            } 
+        }
 
         // --- RUN VIEW LOGIC ---
         function switchView(viewName) {
@@ -1758,6 +1788,10 @@
 
             const renderRow = (step, isFork = false) => {
                 if (step.isPaused) return ''; // GLOBAL PAUSE CHECK
+				
+				// --- NEW CODE: Hide Anchor Habits ---
+                if (step.isAnchor) return ''; 
+                // ------------------------------------
 
                 const assignments = step.assignments || {};
                 const importantClass = step.isImportant ? 'habit-important' : '';
@@ -2198,23 +2232,61 @@
 
         // --- WORKFLOW EDITOR FUNCTIONS ---
         function switchEditWorkflow(id) { state.activeWorkflowId = id; state.editingStepIndex = null; renderEditor(); }
-        function createWorkflow() {
+		function createWorkflow() {
             const name = prompt("Name for new workflow:", "Evening Routine");
-            if(name) { const newId = "workflow-" + Date.now(); state.workflows.push({ id: newId, name: name, active: true, steps: JSON.parse(JSON.stringify(DEFAULT_WORKFLOW_STEPS)) }); state.activeWorkflowId = newId; saveData(); }
+            if(name) { 
+                const newId = "workflow-" + Date.now(); 
+                state.workflows.push({ id: newId, name: name, active: true, steps: JSON.parse(JSON.stringify(DEFAULT_WORKFLOW_STEPS)) }); 
+                state.activeWorkflowId = newId; 
+                saveData(); 
+                // --- FIX: Force UI Refresh ---
+                renderEditor(); 
+                renderDashboard();
+                showToast("Workflow Created");
+            }
         }
         function renameWorkflow() { const w = getActiveWorkflow(); const newName = prompt("Rename workflow:", w.name); if(newName) { w.name = newName; saveData(); } }
-        function deleteWorkflow() { if(state.workflows.length <= 1) { alert("You must have at least one workflow."); return; } if(confirm(`Delete "${getActiveWorkflow().name}"?`)) { state.workflows = state.workflows.filter(w => w.id !== state.activeWorkflowId); state.activeWorkflowId = state.workflows[0].id; saveData(); } }
+        function deleteWorkflow() { 
+            if(state.workflows.length <= 1) { alert("You must have at least one workflow."); return; } 
+            if(confirm(`Delete "${getActiveWorkflow().name}"?`)) { 
+                state.workflows = state.workflows.filter(w => w.id !== state.activeWorkflowId); 
+                state.activeWorkflowId = state.workflows[0].id; 
+                saveData(); 
+                // --- FIX: Force UI Refresh ---
+                renderEditor();
+                renderDashboard();
+                showToast("Workflow Deleted");
+            } 
+        }
         
+        // --- NEW HELPER: Logs changes for AI to analyze later ---
+        function logStatusChange(type, id, status, name) {
+            if(!state.statusLog) state.statusLog = [];
+            state.statusLog.push({
+                date: new Date().toISOString(),
+                type: type, // 'workflow' or 'habit'
+                id: id,
+                name: name || 'Unknown',
+                status: status // 'active', 'inactive', 'paused', 'resumed'
+            });
+            // Keep log size reasonable (last 500 changes)
+            if(state.statusLog.length > 500) state.statusLog = state.statusLog.slice(-500);
+        }
+
+        // --- UPDATED: Toggles workflow and logs it ---
         async function toggleWorkflowActive() { 
             const w = getActiveWorkflow(); 
             const isCurrentlyActive = isWorkflowActiveForUser(w.id);
             if (isCurrentlyActive) {
                 if (!state.userPrefs.hiddenWorkflows.includes(w.id)) state.userPrefs.hiddenWorkflows.push(w.id);
+                logStatusChange('workflow', w.id, 'deactivated', w.name);
             } else {
                 state.userPrefs.hiddenWorkflows = state.userPrefs.hiddenWorkflows.filter(id => id !== w.id);
+                logStatusChange('workflow', w.id, 'activated', w.name);
             }
             await saveUserPrefs();
             renderEditor(); 
+            renderDashboard(); 
         }
         
         function organizeSteps() {
@@ -2277,10 +2349,32 @@
             else getActiveWorkflow().steps[index].isImportant = !getActiveWorkflow().steps[index].isImportant;
             saveData(); renderEditor();
         }
+        // --- UPDATED: Toggles pause and logs it ---
         function togglePause(index, isCommitment) {
-            if(isCommitment) state.commitments[index].isPaused = !state.commitments[index].isPaused;
-            else getActiveWorkflow().steps[index].isPaused = !getActiveWorkflow().steps[index].isPaused;
-            saveData(); renderEditor();
+            let item;
+            if(isCommitment) item = state.commitments[index];
+            else item = getActiveWorkflow().steps[index];
+            
+            item.isPaused = !item.isPaused;
+            logStatusChange('habit', item.id, item.isPaused ? 'paused' : 'resumed', item.text);
+            
+            saveData(); 
+            renderEditor();
+        }
+
+        // --- NEW FUNCTION: Toggles Anchor status ---
+        function toggleAnchor(index, isCommitment) {
+            let item;
+            if(isCommitment) item = state.commitments[index];
+            else item = getActiveWorkflow().steps[index];
+
+            item.isAnchor = !item.isAnchor;
+            
+            // This is the missing line that ensures the AI knows WHEN it happened:
+            logStatusChange('habit', item.id, item.isAnchor ? 'converted_to_anchor' : 'removed_anchor', item.text);
+            
+            saveData(); 
+            renderEditor();
         }
 
         function toggleEditStep(index) {
@@ -2560,6 +2654,15 @@
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="window.app.toggleImportance(${index}, false)" class="p-2 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors" title="Mark Important"><i data-lucide="star" class="w-4 h-4 ${starClass}"></i></button>
+                                    
+                                    <div class="relative group">
+                                        <button onclick="window.app.toggleAnchor(${index}, false)" class="p-2 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors" title="Mark as Anchor">
+                                            <i data-lucide="anchor" class="w-4 h-4 ${step.isAnchor ? 'text-blue-400 fill-blue-400/20' : 'text-slate-600'}"></i>
+                                        </button>
+                                        <div class="absolute bottom-full mb-2 right-0 w-48 bg-black text-white text-[10px] rounded p-2 hidden group-hover:block z-50 border border-slate-600 shadow-xl pointer-events-none">
+                                            <strong>Anchor Habit:</strong><br>Appears in "Run" mode to establish routine, but hidden from Tracking sheets.
+                                        </div>
+                                    </div>
                                     <button onclick="window.app.togglePause(${index}, false)" class="p-2 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors" title="${step.isPaused ? 'Unpause Step' : 'Pause Step Globally'}"><i data-lucide="${pauseIcon}" class="w-4 h-4 ${pauseClass}"></i></button>
                                 </div>
                             </div>
@@ -2633,7 +2736,7 @@
         function deleteStep(index) { if(confirm("Delete this step?")) { const w = getActiveWorkflow(); w.steps.splice(index, 1); saveData(); state.editingStepIndex = null; renderEditor(); } }
 
         window.app = {
-            switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, 
+            switchView, nextStep, restartFlow, updateStep, addStep, deleteStep, toggleAnchor,
             openAuthModal, closeAuthModal, toggleAuthMode, handleAuthSubmit, handleGuestLogin, doLogout, renderAuthUI,
             switchEditWorkflow, createWorkflow, renameWorkflow, deleteWorkflow, toggleWorkflowActive,
             closeRun, startRun, goHome,
