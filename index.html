@@ -1057,54 +1057,59 @@
 
         // --- DATA LOGIC ---
 
-        async function loadDataFromFirestore(uid) {
-            try {
-                let docRef;
-                if (state.householdId) {
-                    docRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
-                } else {
-                    docRef = doc(db, "artifacts", appId, "users", uid, "data", "flowhabit");
-                }
+		async function loadDataFromFirestore(uid) {
+			try {
+				let docRef;
+				if (state.householdId) {
+					docRef = doc(db, "artifacts", appId, "public", "data", "households", state.householdId);
+				} else {
+					docRef = doc(db, "artifacts", appId, "users", uid, "data", "flowhabit");
+				}
 
-                const docSnap = await getDoc(docRef);
+				const docSnap = await getDoc(docRef);
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if(state.householdId) {
-                        if(data.members) state.householdMembers = data.members;
-                        if(data.name) state.householdName = data.name;
-                        if(data.privacy) state.householdPrivacy = data.privacy;
-                    }
+				if (docSnap.exists()) {
+					const data = docSnap.data();
+					if (state.householdId) {
+						if (data.members) state.householdMembers = data.members;
+						if (data.name) state.householdName = data.name;
+						if (data.privacy) state.householdPrivacy = data.privacy;
+					}
 
-                    if(data.workflows && Array.isArray(data.workflows)) {
-                        state.workflows = data.workflows;
-                        state.commitments = data.commitments || [];
-                        state.trackingLog = data.trackingLog || {};
-                        state.statusLog = data.statusLog || []; // <--- ADDED THIS
-                        showToast(state.householdId ? "Synced with Household" : "Synced with Cloud");
-                    }
-                    } else if (data.workflow) {
-                        state.workflows = [{ id: 'migrated', name: 'My Routine', active: true, steps: data.workflow }];
-                        saveData(); 
-                    } else {
-                         state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-                         state.commitments = [];
-                         state.trackingLog = {};
-                    }
-                } else {
-                    state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-                    state.commitments = [];
-                    state.trackingLog = {};
-                    if (!state.householdId) await saveData(true); 
-                }
-            } catch (error) {
-                console.error("Error loading from Firestore:", error);
-                showToast("Sync Error", true);
-                state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
-                state.commitments = [];
-                state.trackingLog = {};
-            }
-        }
+					if (data.workflows && Array.isArray(data.workflows)) {
+						state.workflows = data.workflows;
+						state.commitments = data.commitments || [];
+						state.trackingLog = data.trackingLog || {};
+						state.statusLog = data.statusLog || []; // <--- ADDED THIS
+						showToast(state.householdId ? "Synced with Household" : "Synced with Cloud");
+					} else if (data.workflow) {
+						// Migration support for older data structure
+						state.workflows = [{
+							id: 'migrated',
+							name: 'My Routine',
+							active: true,
+							steps: data.workflow
+						}];
+						saveData();
+					} else {
+						state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
+						state.commitments = [];
+						state.trackingLog = {};
+					}
+				} else {
+					state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
+					state.commitments = [];
+					state.trackingLog = {};
+					if (!state.householdId) await saveData(true);
+				}
+			} catch (error) {
+				console.error("Error loading from Firestore:", error);
+				showToast("Sync Error", true);
+				state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
+				state.commitments = [];
+				state.trackingLog = {};
+			}
+		}
 
         async function saveData(forceCloud = false) {
             pruneHistory();
