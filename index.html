@@ -1252,6 +1252,7 @@
                         state.workflows = parsed.workflows;
                         state.commitments = parsed.commitments || [];
                         state.trackingLog = parsed.trackingLog || {};
+						state.statusLog = parsed.statusLog || [];
                     } else {
                         state.workflows = JSON.parse(JSON.stringify(DEFAULT_WORKFLOWS));
                     }
@@ -2759,3 +2760,4 @@
     </script>
 </body>
 </html>
+
