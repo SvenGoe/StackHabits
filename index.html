@@ -2006,8 +2006,8 @@
                 // Filter out paused commitments for tracking view
                 const visibleCommitments = state.commitments.filter(c => !c.isPaused);
                 if (visibleCommitments.length > 0) {
-                    // Added commitment-header class for specific print styling
-                    html += `<div class="tracker-section"><div class="section-header commitment-header bg-indigo-900 flex justify-between"><span>Commitments</span><span class="opacity-70 text-[9px] font-normal normal-case">Standalone</span></div>`;
+                    // UPDATED LINE BELOW: Added id="track-commitments" and class "scroll-mt-24"
+                    html += `<div id="track-commitments" class="tracker-section scroll-mt-24"><div class="section-header commitment-header bg-indigo-900 flex justify-between"><span>Commitments</span><span class="opacity-70 text-[9px] font-normal normal-case">Standalone</span></div>`;
                     visibleCommitments.forEach(c => html += renderRow(c));
                     html += `</div>`;
                 }
@@ -2130,9 +2130,18 @@
                 
                 if (activeCommCount > 0) {
                     const commCard = document.createElement('div');
-                    // Note: No data-id, so it won't be sortable with workflows, keeping it fixed at the end or separate
+                    // Note: No data-id, so it won't be sortable.
                     commCard.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-xl text-left transition-all shadow-lg group select-none cursor-pointer";
-                    commCard.onclick = () => window.app.switchView('track');
+                    
+                    // CLICK HANDLER: Switches view, then finds the ID and scrolls to it
+                    commCard.onclick = () => {
+                        window.app.switchView('track');
+                        setTimeout(() => {
+                            const el = document.getElementById('track-commitments');
+                            if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100); // 100ms delay ensures the Track view has finished rendering
+                    };
+
                     commCard.innerHTML = `
                         <div class="flex items-start justify-between mb-4 pointer-events-none">
                             <div class="p-3 bg-emerald-500/10 rounded-lg text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
